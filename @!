@@ -1,0 +1,33 @@
+#include <stdio.h>
+#include <int.h>
+#include <inttypes.h>
+
+#define TAM_NOME 20
+
+struct nodo{
+	char nome[TAM_NOME];
+	short idade;
+	int64_t cpf;
+	Nodo_t *fe;
+	Nodo_t *fd;
+};
+
+void printpessoa(struct nodo no){
+	printf("\nNome:")
+	for (size_t i = 0; i < TAM_NOME; i++){
+		printf("%c", no.nome[i]);
+	}
+
+	printf("\nIdade: %s", no.idade);
+	printf("\nCPF: %s", no.cpf);
+}
+
+void preordem(struct nodo *no){
+	if (no != NULL){
+		printf(no->);
+	}
+}
+
+int main(){
+	return 0;
+}
