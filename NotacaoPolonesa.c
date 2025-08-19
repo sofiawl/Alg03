@@ -1,3 +1,10 @@
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+// CALCULADORA DE NOTAÇÃO POLONESA
+// Desenvolvida por Sofia Wamser Lima em 16/Ago/2025
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -20,13 +27,15 @@ void insere(struct nodo* pai, struct nodo* filho){
         printf("Erro ao adicionar novo nodo\n");
 }
 
-void travesia_em_preordem(struct nodo *pai, struct nodo *filho, struct nodo **arvore, size_t count){
+void travesia_em_preordem(struct nodo *pai, struct nodo *filho, struct nodo **arvore, size_t count, size_t tam){
+    if (count >= tam) return;
+
     if(pai != NULL && filho != NULL){
-        //insere(pai, filho);
+        insere(pai, filho);
         printf("Pai: %c\n", pai->op);
-        printf("Filho: %c\n", pai->op);
-        travesia_em_preordem(pai->fe, arvore[count+1], arvore, count+1);
-        travesia_em_preordem(pai->fd, arvore[count+2], arvore, count+2);
+        printf("Filho: %c\n", filho->op);
+        travesia_em_preordem(pai->fe, arvore[count+1], arvore, count+1, tam);
+        travesia_em_preordem(pai->fd, arvore[count+2], arvore, count+2, tam);
     }
 }
 
@@ -50,18 +59,16 @@ int main(){
         arvore[i] = no;
         i++;
     }
-    size_t tam_op = i-1;
-    while(i <= TAM_NOT){
-        arvore[i] = NULL;
-        i++;
-    }
 
     // Pré-ordem para inserir
-    travesia_em_preordem(arvore[0], arvore[1], arvore, 1);
+    travesia_em_preordem(arvore[0], arvore[1], arvore, 1, i-1);
+
     /*i = 0;
     while(i < tam_op){
         free(arvore[i]);
     }
+    // Em ordem para ler
+    
     // Pós-ordem para dar free
     */
     return 0;
