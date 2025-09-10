@@ -90,6 +90,39 @@ void inserir(struct nodoBB *src, struct nodoBB *new){
             aux = aux->ls;
         }
     }
+
+    // RUIM PORQUE NAO INSERE RAIZ, parte do pressuposto que raiz já está inserida.
+    // Só por isso paulinho nao curtiria
+}
+
+void inserir_correto(struct nodoBB *src, int chave){
+    struct nodoBB *new = malloc(sizeof(nodoBB));
+    if (!new) return;
+
+    new->key = chave;
+    new->ls = NULL;
+    new->rs = NULL;
+
+    struct nodoBB atual = src;
+    struct nodoBB pai = NULL;
+    while(atual){
+        pai = atual;
+        if (new->key < atual.key)
+            atual = atual.ls;
+        else    
+            atual = atual.rs
+    }
+
+    new->dad = pai;
+    if (!pai)
+        src = &new;
+    else {
+        if (new.key < pai.key)
+            pai.ls = new;
+        else
+            pai.rs = new;
+    }
+
 }
 
 struct nodoBB* buscar_DFS(struct nodoBB *no, int x){
