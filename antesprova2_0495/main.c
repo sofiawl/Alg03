@@ -1,12 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
-
 #include "redblack.h"
 
+
+// SEMPRE QUE ATUALIZAR RAIZ ATUALIZAR FILHO DE NIL
+
 int main(){
-	//ATENÇÃO, ESSE É APENAS UM EXEMPLO DE IMPLEMENTAÇÃO DO MAIN.
-	//MODIFIQUE DE ACORDO COM SUAS NECESSIDADES E DE ACORDO COM AS ESPECIFICAÇÕES.
-	struct nodo* raiz;
+
+	initNIL();
+	struct nodo* raiz = NIL;
 	
 	imprimirDadosAluno();
 
@@ -19,8 +21,8 @@ int main(){
 		switch (op) {
 			case 'i':
 				if (scanf("%d", &val) != 1) return 1;
-
-				if(!inserir(&raiz, val))
+				
+				if(inserir(&raiz, val) == NIL)
 					fprintf(stderr,"Falha ao inserir.\n");
 				break;
 			case 'r':
@@ -38,8 +40,7 @@ int main(){
 			case 'b':
 			 	if (scanf("%d", &val) != 1) return 1;
 				struct nodo* valB = buscar(raiz, val);
-				//if(valB != &SENTINELA)
-				if(valB->chave != SENTINELA)
+				if(valB != NIL)
 					printf("Encontrado %d\n", valB->chave);
 				else
 					printf("Nao encontrado %d.\n", val);

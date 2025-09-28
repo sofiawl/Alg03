@@ -54,9 +54,9 @@ void preordemSR(struct nodo *no){
 
 void emordem(struct nodo *no){
 	if (no != NULL){
-		preordem(no->fe);
+		emordem(no->fe);
 		printpessoa(*no);
-		preordem(no->fd);
+		emordem(no->fd);
 	}
 }
 
@@ -82,8 +82,8 @@ void emordemSR(struct nodo *no){
 
 void posordem(struct nodo *no){
 	if (no != NULL){
-		preordem(no->fe);
-		preordem(no->fd);
+		posordem(no->fe);
+		posordem(no->fd);
 		printpessoa(*no);
 	}
 }

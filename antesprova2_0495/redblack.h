@@ -1,7 +1,7 @@
 #ifndef REDBLACK_H_
 #define REDBLACK_H_
 
-#define SENTINELA INT_MIN
+static struct nodo *NIL = NULL;
 
 #define PRETO 1
 #define VERMELHO 0
@@ -41,5 +41,8 @@ struct nodo* buscar(struct nodo* raiz, int chave);
 void imprimirEmOrdem(struct nodo* nodo);
 
 void imprimirEmLargura(struct nodo* raiz);
+
+void initNIL();
+void endNIL();
 
 #endif//REDBLACK_H
