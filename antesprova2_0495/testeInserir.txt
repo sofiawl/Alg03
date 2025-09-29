@@ -1,4 +1,26 @@
-i 50
-e
+i 30
+i 40
+i 60
+i 19
+i 0
+b 60
+i 60
+i 67
+e 
 l
 f
+
+// a de cima nao funfona
+// essa merda funciona
+i 30
+i 15
+i 16
+i 35
+l 
+i 15
+b 16
+b 36
+f
+
+
+

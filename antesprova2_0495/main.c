@@ -4,7 +4,8 @@
 
 
 // SEMPRE QUE ATUALIZAR RAIZ ATUALIZAR FILHO DE NIL
-// LEMBRAR DE DAR FREE NOS NODOS CRIADOS
+
+// ESTÁ CRIANDO DOIS NODOS A MAIS NA INSERÇÃO, UM SLA PORQUE O OUTRO QUANDO INSERE VALORES IGUAIS
 struct nodo *NIL = NULL;
 
 int main(){
@@ -64,7 +65,7 @@ int main(){
 	            }
 	            struct nodo* valB = buscar(raiz, val);
 	            if(valB != NIL)
-	                printf("Encontrado %d\n", valB->chave);
+	                printf("Encontrado %d.\n", valB->chave);
 	            else
 	                printf("Nao encontrado %d.\n", val);
 	            break;
@@ -74,7 +75,7 @@ int main(){
 	    }
 	}
 
-	// CRIAR FUNCAO PARA LIBERAR O RESTO DA ARVORE
+	liberarArvore(&raiz);
 	endNIL();
 
 	return 0;

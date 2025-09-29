@@ -46,6 +46,7 @@ void imprimirEmLargura(struct nodo* raiz);
 // O(n)
 void imprimirEmLargura_RS(struct nodo* raiz);
 
+void liberarArvore(struct nodo** raiz);
 void initNIL();
 void endNIL();
 

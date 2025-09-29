@@ -60,7 +60,21 @@ void endNIL(void){
     }
 }
 
+// libera árvore em pós ordem
+void liberarArvore(struct nodo** raiz){
+    if (*raiz == NIL)
+        return;
+
+    liberarArvore(&(*raiz)->fe);
+    liberarArvore(&(*raiz)->fd);
+
+    free(*raiz);
+
+    *raiz = NULL; 
+}
+
 struct nodo* criarNodo(int chave){
+    printf("nodo criado\n");
     struct nodo* z = malloc(sizeof(struct nodo));
     if (!z){
         fprintf(stderr, "Falha ao alocar memoria.\n");
@@ -182,11 +196,10 @@ struct nodo* inserir(struct nodo** raiz, int chave){
     if (!raiz) return NIL;
 
     // evita duplicata 
-	// AQUI É UMA FALHA AO INSERIR?
     struct nodo *buscado = buscar(*raiz, chave);
-    //printf("\n%d\n", buscado->chave);
+    printf("buscado chave: %d\n", buscado->chave);
     if(buscado != NIL){
-        fprintf(stderr, "Chave %d já existe\n", chave);
+        printf("duplicado %d\n", chave);
         return NIL;
     }
 
@@ -320,12 +333,6 @@ void corrigirExcluir(struct nodo** raiz, struct nodo* x){
     }
 }
 
-void deletarNodo(struct nodo *nodo){
-    free(nodo);
-    nodo->fd = NULL;
-    nodo->fe = NULL;
-}
-
 // retorna o número de nodos excluídos
 int excluir(struct nodo** raiz, int chave){
     if (!raiz) return -1;
@@ -374,13 +381,14 @@ int excluir(struct nodo** raiz, int chave){
     if (corOriginal == PRETO)
         corrigirExcluir(raiz, x);
 
-    deletarNodo(z);
+    free(z);
+    z = NULL;
 }
 
 //retorna SENTINELA se não existe
 // Iterativo
 struct nodo* buscar(struct nodo* raiz, int chave){
-    if (!raiz) return NIL;
+    if (!raiz) return NULL;
 
     while (raiz != NIL && chave != raiz->chave)
     {
@@ -395,7 +403,7 @@ struct nodo* buscar(struct nodo* raiz, int chave){
 
 // Recursivo
 struct nodo* buscar_RS(struct nodo* raiz, int chave){
-    if (!raiz) return NIL;
+    if (!raiz) return NULL;
 
     if (raiz != NIL && chave == raiz->chave)
         return raiz;
@@ -411,7 +419,7 @@ void imprimirEmOrdem(struct nodo* nodo){
     if (nodo != NIL)
     {
         imprimirEmOrdem(nodo->fe);
-        printf("\t%d", nodo->chave);
+        printf("%d\t", nodo->chave);
         imprimirEmOrdem(nodo->fd);
     }
 
@@ -439,7 +447,7 @@ void imprimirEmOrdem_RS(struct nodo* raiz){
         
         // Visita o nó
         atual = pilha[--topo];
-        printf("\t%d", atual->chave);
+        printf("%d\t", atual->chave);
         
         // Vai para a subárvore direita
         atual = atual->fd;
@@ -464,10 +472,9 @@ void imprimirNivel(struct nodo* raiz, int nivel_alvo, int nivel_atual) {
     
     // Se chegou no nível desejado, imprime
     if (nivel_atual == nivel_alvo) {
-        printf("\t(%c)%d", getCor(raiz), raiz->chave);
-        if (raiz->pai != NIL) {
-            printf(" [%d%c]", raiz->pai->chave, getTipoFilho(raiz));
-        }
+        printf("(%c)%d\t", getCor(raiz), raiz->chave);
+        printf(" [%d%c]", raiz->pai->chave, getTipoFilho(raiz));
+        
         return;
     }
     
@@ -528,21 +535,19 @@ void imprimirEmLargura_RS(struct nodo* raiz){
         
         // Se mudou de nível, imprime nova linha
         if (nivel != nivel_atual) {
-            printf("\n[%d]", nivel);
+            printf("\n[%d]\t", nivel);
             nivel_atual = nivel;
-            primeiro_do_nivel = true;
+            primeiro_do_nivel = false;
         } else if (primeiro_do_nivel) {
-            printf("[%d]", nivel);
+            printf("[%d]\t", nivel);
             primeiro_do_nivel = false;
         }
         
         // Imprime o nó no formato: (COR)CHAVE [CHAVEPAI e/d]
-        printf("\t(%c)%d", getCor(atual), atual->chave);
-        
-        if (atual->pai != NIL) {
-            printf(" [%d%c]", atual->pai->chave, getTipoFilho(atual));
-        }
-        
+        printf("(%c)%d ", getCor(atual), atual->chave);    
+        printf("[%d%c]", atual->pai->chave, getTipoFilho(atual));
+        printf("\t");
+
         // Adiciona filhos na fila
         if (atual->fe != NIL) {
             fila[fim] = atual->fe;
@@ -557,6 +562,7 @@ void imprimirEmLargura_RS(struct nodo* raiz){
         }
     }
     
+    printf("\n");
     free(fila);
     free(niveis);
 }
