@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <limits.h>
+#include <stdbool.h>
 #include "redblack.h"
 
 
@@ -39,24 +40,28 @@ void imprimirDadosAluno(){
     return;
 }
 
-// inicializa o sentinel
+// inicializa o sentinela
 void initNIL(void){
     NIL = malloc(sizeof(struct nodo));
     if (!NIL){
         fprintf(stderr, "Falha ao alocar memoria.\n");
         exit(1);
     }
+    
     NIL->chave = INT_MIN;
     NIL->pai = NIL->fe = NIL->fd = NIL;
     NIL->cor = PRETO;
 }
 
 void endNIL(void){
-    free(NIL);
+    if (NIL) {
+        free(NIL);
+        NIL = NULL; 
+    }
 }
 
 struct nodo* criarNodo(int chave){
-    struct nodo* z = malloc(sizeof *z);
+    struct nodo* z = malloc(sizeof(struct nodo));
     if (!z){
         fprintf(stderr, "Falha ao alocar memoria.\n");
         exit(1);
@@ -177,7 +182,10 @@ struct nodo* inserir(struct nodo** raiz, int chave){
     if (!raiz) return NIL;
 
     // evita duplicata 
-    if(buscar(*raiz, chave) != NIL){
+	// AQUI É UMA FALHA AO INSERIR?
+    struct nodo *buscado = buscar(*raiz, chave);
+    //printf("\n%d\n", buscado->chave);
+    if(buscado != NIL){
         fprintf(stderr, "Chave %d já existe\n", chave);
         return NIL;
     }
@@ -191,19 +199,19 @@ struct nodo* inserir(struct nodo** raiz, int chave){
         else x = x->fd;
     }
 
-    struct nodo* z = novoNodo(chave);
+    struct nodo* z = criarNodo(chave);
     z->pai = y;
 
     if(y == NIL)
-        *raiz = z;          /* árvore vazia -> novo é raiz */
+        *raiz = z;         
     else if(chave < y->chave)
         y->fe = z;
     else
         y->fd = z;
 
-    /* filhos já são NIL por novoNodo */
+    // filhos já são NIL por novoNodo 
     corrigirInserir(raiz, z);
-    // veirificar o que retornar
+    // verificar o que retornar
     return z;
 }
 
@@ -374,7 +382,7 @@ int excluir(struct nodo** raiz, int chave){
 struct nodo* buscar(struct nodo* raiz, int chave){
     if (!raiz) return NIL;
 
-    while (raiz != NIL || chave != raiz->chave)
+    while (raiz != NIL && chave != raiz->chave)
     {
         if (chave < raiz->chave)
             raiz = raiz->fe;
@@ -389,7 +397,7 @@ struct nodo* buscar(struct nodo* raiz, int chave){
 struct nodo* buscar_RS(struct nodo* raiz, int chave){
     if (!raiz) return NIL;
 
-    if (raiz != NIL || chave == raiz->chave)
+    if (raiz != NIL && chave == raiz->chave)
         return raiz;
 
     if (chave < raiz->chave)
@@ -398,76 +406,157 @@ struct nodo* buscar_RS(struct nodo* raiz, int chave){
 }
 
 void imprimirEmOrdem(struct nodo* nodo){
-    if (!nodo) return;
+    if (!nodo || nodo == NIL) return;
 
     if (nodo != NIL)
     {
         imprimirEmOrdem(nodo->fe);
-        printf("%d", nodo->chave);
+        printf("\t%d", nodo->chave);
         imprimirEmOrdem(nodo->fd);
     }
 
 }
 
-void imprimirEmOrdem_RS(struct nodo* nodo){
-    if (!nodo) return;
-
-    struct nodo **pilha = malloc(1048576 * sizeof(struct nodo));
+// Versão iterativa da impressão em ordem
+void imprimirEmOrdem_RS(struct nodo* raiz){
+    if (!raiz || raiz == NIL) return;
+    
+    struct nodo **pilha = malloc(1000 * sizeof(struct nodo*));
     if (!pilha){
         fprintf(stderr, "Falha ao alocar memoria.\n");
         exit(1);
     }
-
+    
     size_t topo = 0;
-    printf("%d", nodo->chave);
-	pilha[topo++] = nodo->fd;
-	pilha[topo++] = nodo->fe;
+    struct nodo* atual = raiz;
+    
+    while(atual != NIL || topo > 0) {
+        // Vai para o nó mais à esquerda
+        while(atual != NIL) {
+            pilha[topo++] = atual;
+            atual = atual->fe;
+        }
+        
+        // Visita o nó
+        atual = pilha[--topo];
+        printf("\t%d", atual->chave);
+        
+        // Vai para a subárvore direita
+        atual = atual->fd;
+    }
+    
+    free(pilha);
+}
 
-	while(topo > 0) {
-		struct nodo *aux = pilha[--topo];
-		if (aux != NIL){
-			pilha[topo++] = aux->fd;
-            printf("%d", aux->chave);
-			pilha[topo++] = aux->fe;
-		}
-	} 
+char getCor(struct nodo* raiz){
+    return raiz->cor == PRETO ? 'B' : 'R';
+}
 
-	free(pilha);
+char getTipoFilho(struct nodo* raiz){
+    if (raiz->pai == NIL)
+        return 's';
+    else 
+        return raiz->pai->fe == raiz ? 'e' : 'd';
+}
+
+void imprimirNivel(struct nodo* raiz, int nivel_alvo, int nivel_atual) {
+    if (!raiz || raiz == NIL) return;
+    
+    // Se chegou no nível desejado, imprime
+    if (nivel_atual == nivel_alvo) {
+        printf("\t(%c)%d", getCor(raiz), raiz->chave);
+        if (raiz->pai != NIL) {
+            printf(" [%d%c]", raiz->pai->chave, getTipoFilho(raiz));
+        }
+        return;
+    }
+    
+    if (raiz->fe != NIL)
+        imprimirNivel(raiz->fe, nivel_alvo, nivel_atual + 1);
+    if (raiz->fd != NIL)
+        imprimirNivel(raiz->fd, nivel_alvo, nivel_atual + 1);
+}
+
+int calcularAltura(struct nodo* raiz) {
+    if (!raiz || raiz == NIL) return -1;
+    
+    int alt_esq = calcularAltura(raiz->fe);
+    int alt_dir = calcularAltura(raiz->fd);
+    
+    return 1 + (alt_esq > alt_dir ? alt_esq : alt_dir);
 }
 
 void imprimirEmLargura(struct nodo* raiz){
     if (!raiz) return;
 
-    printf("%d", raiz->chave);
-    if (raiz->fd != NIL)
-        imprimirEmLargura(raiz->fd);
-    if (raiz->fe != NIL)
-        imprimirEmLargura(raiz->fe);
+    int altura = calcularAltura(raiz);
+    
+    // Para cada nível, chama a função que imprime apenas esse nível
+    for (int nivel = 0; nivel <= altura; nivel++) {
+        printf("[%d]", nivel);
+        imprimirNivel(raiz, nivel, 0);
+        printf("\n");
+    }
 }
 
+// Impressão em largura com formato especificado
 void imprimirEmLargura_RS(struct nodo* raiz){
-    if (!raiz) return;
-
-    struct nodo **pilha = malloc(1048576 * sizeof(struct nodo));
-    if (!pilha){
+    if (!raiz || raiz == NIL) return;
+    
+    // Fila para BFS - usando array circular simples
+    struct nodo **fila = malloc(1000 * sizeof(struct nodo*));
+    int *niveis = malloc(1000 * sizeof(int));
+    
+    if (!fila || !niveis){
         fprintf(stderr, "Falha ao alocar memoria.\n");
         exit(1);
     }
-
-	size_t topo = 0;
-
-    printf("%d", raiz->chave);
-	pilha[topo++] = raiz->fd;
-	pilha[topo++] = raiz->fe;
-
-	while(topo > 0) {
-		struct nodo *aux = pilha[--topo];
-        printf("%d", raiz->chave);
-		if (aux->fd != NIL)
-            pilha[topo++] = aux->fd;
-        if (aux->fe != NIL)
-            pilha[topo++] = aux->fe;
-	} 
-
-	free(pilha);
+    
+    int inicio = 0, fim = 0;
+    int nivel_atual = 0;
+    bool primeiro_do_nivel = true;
+    
+    // Adiciona raiz na fila
+    fila[fim] = raiz;
+    niveis[fim] = 0;
+    fim++;
+    
+    while(inicio < fim) {
+        struct nodo* atual = fila[inicio];
+        int nivel = niveis[inicio];
+        inicio++;
+        
+        // Se mudou de nível, imprime nova linha
+        if (nivel != nivel_atual) {
+            printf("\n[%d]", nivel);
+            nivel_atual = nivel;
+            primeiro_do_nivel = true;
+        } else if (primeiro_do_nivel) {
+            printf("[%d]", nivel);
+            primeiro_do_nivel = false;
+        }
+        
+        // Imprime o nó no formato: (COR)CHAVE [CHAVEPAI e/d]
+        printf("\t(%c)%d", getCor(atual), atual->chave);
+        
+        if (atual->pai != NIL) {
+            printf(" [%d%c]", atual->pai->chave, getTipoFilho(atual));
+        }
+        
+        // Adiciona filhos na fila
+        if (atual->fe != NIL) {
+            fila[fim] = atual->fe;
+            niveis[fim] = nivel + 1;
+            fim++;
+        }
+        
+        if (atual->fd != NIL) {
+            fila[fim] = atual->fd;
+            niveis[fim] = nivel + 1;
+            fim++;
+        }
+    }
+    
+    free(fila);
+    free(niveis);
 }

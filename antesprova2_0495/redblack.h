@@ -1,7 +1,7 @@
 #ifndef REDBLACK_H_
 #define REDBLACK_H_
 
-static struct nodo *NIL = NULL;
+extern struct nodo *NIL;
 
 #define PRETO 1
 #define VERMELHO 0
@@ -39,8 +39,12 @@ int excluir(struct nodo** raiz, int chave);
 struct nodo* buscar(struct nodo* raiz, int chave);
 
 void imprimirEmOrdem(struct nodo* nodo);
+void imprimirEmOrdem_RS(struct nodo* nodo);
 
+// O(n²)
 void imprimirEmLargura(struct nodo* raiz);
+// O(n)
+void imprimirEmLargura_RS(struct nodo* raiz);
 
 void initNIL();
 void endNIL();
