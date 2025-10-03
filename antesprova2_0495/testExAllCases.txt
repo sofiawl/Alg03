@@ -1,0 +1,133 @@
+//TESTES FUNÇÃO EXCLUIR:
+//remover folha vermelha (sem correção necessária)
+i 50
+i 30
+i 70
+i 20
+i 40
+e
+l
+r 40
+e
+l
+f
+
+//remover nodo com um filho, filho é fe
+i 50
+i 30
+i 70
+i 20
+i 40
+i 35
+e
+l
+r 40
+e
+l
+f
+
+//remover nodo com um filho, filho é fd
+
+//remover nodo com dois filhos
+i 50
+i 30
+i 70
+i 20
+i 40
+i 60
+i 80
+e
+l
+r 70
+e
+l
+f
+##resolvi erro, min_arvore deve ser feita em z->fd, não na raiz
+
+//remover nodo não existente
+i 50
+i 30
+r 100
+e
+l
+f
+
+//remover raiz com dois filhos
+i 50
+i 30
+i 70
+i 10
+i 80
+e
+l
+r 50
+e
+l
+f
+
+//TESTAR CORRIGIR EXCLUIR
+//irmão do excluido é vermelho
+i 50
+i 30
+i 70
+i 20
+i 40
+i 60
+i 80
+i 65
+e
+l
+r 60
+e
+l
+f
+## resolvi erro, 65 etava continuando vermelho mesmo quando 60 foi removido e 65 virou filho de 70 que é vermelho
+## coloquei no final de corrigirexcluir para atualizar toda cor de x para preto
+
+//irmão e filhos do excluido são pretos
+i 50
+i 30
+i 70
+i 20
+i 40
+i 60
+i 80
+e
+l
+r 60
+e
+l
+f
+
+//irmão de w é preto, fe é vermelho e fd é preto
+i 50
+i 30
+i 70
+i 20
+i 40
+i 60
+i 80
+i 75
+e
+l
+r 60
+e
+l
+f
+
+//irmão de w é preto, fd é preto
+i 50
+i 30
+i 70
+i 20
+i 40
+i 60
+i 80
+i 85
+e
+l
+r 60
+e
+l
+f
+

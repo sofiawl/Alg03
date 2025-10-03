@@ -21,7 +21,7 @@ struct aluno* getAluno(){
     
 	strcpy(retorno->nome, "SOFIA WAMSER LIMA");
     strcpy(retorno->nomeDinf, "swl24");
-    retorno->grr = 495;
+    retorno->grr = 20240495;
 
 	return retorno;
 }
@@ -74,7 +74,6 @@ void liberarArvore(struct nodo** raiz){
 }
 
 struct nodo* criarNodo(int chave){
-    printf("nodo criado\n");
     struct nodo* z = malloc(sizeof(struct nodo));
     if (!z){
         fprintf(stderr, "Falha ao alocar memoria.\n");
@@ -107,7 +106,6 @@ void rotacionarEsq(struct nodo** raiz, struct nodo *x){
     else 
         x->pai->fd = y;
     
-
     y->fe = x;
     x->pai = y;
 }
@@ -142,23 +140,23 @@ void corrigirInserir(struct nodo** raiz, struct nodo* z){
     while(z->pai->cor == VERMELHO){
         if (z->pai == z->pai->pai->fe) // pai de z é filho esquerdo
         {
-            struct nodo* tio_z = z->pai->pai->fd; // y é tio de z
-            if (tio_z->cor == PRETO) // pai e tio de z não vermelhor
+            struct nodo* tio_z = z->pai->pai->fd; // z_tio é tio de z
+            if (tio_z->cor == VERMELHO) // pai e tio de z são vermelhos
             {
                 z->pai->cor  = PRETO;
                 tio_z->cor = PRETO;
                 z->pai->pai->cor = VERMELHO;
                 z = z->pai->pai;
             }
-            else
+            else // pai é vermelho e tio de z é preto
             {
-                // caso 1
+                // caso 1, z é filho direito
                 if (z == z->pai->fd)
                 {
                     z = z->pai;
                     rotacionarEsq(raiz, z);
                 }
-                // caso 2
+                // caso 2, z é filho esquerdo ou filho direito
                 z->pai->cor = PRETO;
                 z->pai->pai->cor = VERMELHO;
                 rotacionarDir(raiz, z->pai->pai);
@@ -166,24 +164,26 @@ void corrigirInserir(struct nodo** raiz, struct nodo* z){
         }  
         else // pai de z é filho direito
         {
-            struct nodo* y = z->pai->pai->fe;
-            if (y->cor == VERMELHO)
+            struct nodo* tio_z = z->pai->pai->fe; //
+            if (tio_z->cor == VERMELHO)
             {
                 z->pai->cor = PRETO;
-                y->cor = PRETO;
+                tio_z->cor = PRETO;
                 z->pai->pai->cor = VERMELHO;
                 z = z->pai->pai;
             }
             else
             {
+                //caso 1, z é filho esquerdo
                 if (z == z->pai->fe)
                 {
                     z = z->pai;
                     rotacionarDir(raiz, z);
                 }
+                //caso 2, z é filho esquerdo ou direito
                 z->pai->cor = PRETO;
                 z->pai->pai->cor = VERMELHO;
-                rotacionarEsq(raiz, z);
+                rotacionarEsq(raiz, z->pai->pai);
             }
         } 
     }
@@ -197,9 +197,7 @@ struct nodo* inserir(struct nodo** raiz, int chave){
 
     // evita duplicata 
     struct nodo *buscado = buscar(*raiz, chave);
-    printf("buscado chave: %d\n", buscado->chave);
     if(buscado != NIL){
-        printf("duplicado %d\n", chave);
         return NIL;
     }
 
@@ -208,8 +206,10 @@ struct nodo* inserir(struct nodo** raiz, int chave){
 
     while(x != NIL){
         y = x;
-        if(chave < x->chave) x = x->fe;
-        else x = x->fd;
+        if(chave < x->chave)
+            x = x->fe;
+        else 
+            x = x->fd;
     }
 
     struct nodo* z = criarNodo(chave);
@@ -222,9 +222,9 @@ struct nodo* inserir(struct nodo** raiz, int chave){
     else
         y->fd = z;
 
-    // filhos já são NIL por novoNodo 
+
     corrigirInserir(raiz, z);
-    // verificar o que retornar
+
     return z;
 }
 
@@ -331,6 +331,9 @@ void corrigirExcluir(struct nodo** raiz, struct nodo* x){
             }
         }
     }
+
+    // Coloquei isso depois, verificar se está correto
+    x->cor = PRETO;
 }
 
 // retorna o número de nodos excluídos
@@ -340,8 +343,7 @@ int excluir(struct nodo** raiz, int chave){
     struct nodo* z = buscar(*raiz, chave);
     if (z == NIL)
     {
-        printf("O nodo %d não pode ser retirado, pois não está na árvore", chave);
-        return -1;
+        return 0;
     }
 
     struct nodo* y = z;
@@ -356,11 +358,11 @@ int excluir(struct nodo** raiz, int chave){
     else if(z->fd == NIL)
     {
         x = z->fe;
-        transplantar(raiz, z, z->fd);
+        transplantar(raiz, z, z->fe);
     }
     else 
     {
-        y = min_arvore(*raiz);
+        y = min_arvore(z->fd);
         corOriginal = y->cor;
         x = y->fd;
         if (y != z->fd)
@@ -383,6 +385,7 @@ int excluir(struct nodo** raiz, int chave){
 
     free(z);
     z = NULL;
+    return 1;
 }
 
 //retorna SENTINELA se não existe
