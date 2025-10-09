@@ -1,12 +1,48 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 #include "redblack.h"
 
 
-// SEMPRE QUE ATUALIZAR RAIZ ATUALIZAR FILHO DE NIL
+#define PRETO 1
+#define VERMELHO 0
 
-// ESTÁ CRIANDO DOIS NODOS A MAIS NA INSERÇÃO, UM SLA PORQUE O OUTRO QUANDO INSERE VALORES IGUAIS
-struct nodo *NIL = NULL;
+extern struct nodo *NIL;
+
+// Inicializar sentinela global
+void initNIL(void){
+    NIL = malloc(sizeof(struct nodo));
+    if (!NIL){
+		fprintf(stderr, "Falha ao alocar memoria.\n");
+    	exit(1);
+    }
+    
+    NIL->chave = INT_MIN;
+    NIL->pai = NIL->fe = NIL->fd = NIL;
+    NIL->cor = PRETO;
+}
+
+// Liberar sentinela global
+void endNIL(void){
+    if (NIL) {
+        free(NIL);
+        NIL = NULL; 
+    }
+}
+
+// Liberar árvore em pós ordem
+void liberarArvore(struct nodo** raiz){
+    if (*raiz == NIL)
+        return;
+
+    liberarArvore(&(*raiz)->fe);
+    liberarArvore(&(*raiz)->fd);
+
+    free(*raiz);
+
+    *raiz = NULL; 
+}
 
 int main(){
 	
@@ -23,7 +59,7 @@ int main(){
 	    // Remove o \n se existir
 	    linha[strcspn(linha, "\n")] = '\0';
 	
-	    if(sscanf(linha, "%c", &op) != 1) {
+	    if(sscanf(linha, " %c", &op) != 1) {
 	        fprintf(stderr, "Formato inválido\n");
 	        continue;
 	    }
@@ -32,10 +68,11 @@ int main(){
 	
 	    switch (op) {
 	        case 'i':
-	            if (sscanf(linha, "%c %d", &op, &val) != 2) {
-	                fprintf(stderr, "Formato inválido para inserir\n");
-	                break;
-	            }
+				int n;
+	            if (sscanf(linha, "%c %d%n", &op, &val, &n) != 2 || linha[n] != '\0') {
+				    fprintf(stderr, "Formato inválido\n");
+				    break;
+				}
 	            if(inserir(&raiz, val) == NIL)
 	                fprintf(stderr,"Falha ao inserir.\n");
 	            break;
@@ -55,7 +92,7 @@ int main(){
 	            break;
 	
 	        case 'l':
-	            imprimirEmLargura_RS(raiz);
+	            imprimirEmLargura(raiz);
 	            break;
 	
 	        case 'b':
@@ -80,45 +117,3 @@ int main(){
 
 	return 0;
 }
-
-/*
-	char op;
-	int val;
-	if (scanf("%c", &op) != 1) return 1;
-
-	while(op != 'f'){
-
-		switch (op) {
-			case 'i':
-				if (scanf("%d", &val) != 1) return 1;
-				
-				if(inserir(&raiz, val) == NIL)
-					fprintf(stderr,"Falha ao inserir.\n");
-				break;
-			case 'r':
-				if (scanf("%d", &val) != 1) return 1;
-				if(!excluir(&raiz, val))
-					fprintf(stderr,"Falha ao remover %d.\n", val);
-				break;
-			case 'e':
-				imprimirEmOrdem(raiz);
-				puts("\n");
-				break;
-			case 'l':
-				imprimirEmLargura(raiz);
-				break;
-			case 'b':
-			 	if (scanf("%d", &val) != 1) return 1;
-				struct nodo* valB = buscar(raiz, val);
-				if(valB != NIL)
-					printf("Encontrado %d\n", valB->chave);
-				else
-					printf("Nao encontrado %d.\n", val);
-				break;
-			default:
-				fprintf(stderr,"Opcao Invalida %d", (int)op);
-		}
-
-		if (scanf("%c", &op) != 1) return 1;
-	}
-*/

@@ -1,10 +1,6 @@
 #ifndef REDBLACK_H_
 #define REDBLACK_H_
 
-extern struct nodo *NIL;
-
-#define PRETO 1
-#define VERMELHO 0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +12,7 @@ struct nodo {
     struct nodo *fe;
     struct nodo *fd;
     struct nodo *pai;
-    unsigned int cor;
+    int cor;
 };
 
 struct aluno{
@@ -39,15 +35,14 @@ int excluir(struct nodo** raiz, int chave);
 struct nodo* buscar(struct nodo* raiz, int chave);
 
 void imprimirEmOrdem(struct nodo* nodo);
+// TESTAR E TIRAR
 void imprimirEmOrdem_RS(struct nodo* nodo);
 
 // O(n²)
 void imprimirEmLargura(struct nodo* raiz);
 // O(n)
-void imprimirEmLargura_RS(struct nodo* raiz);
 
-void liberarArvore(struct nodo** raiz);
-void initNIL();
-void endNIL();
+//TESTAR E TIRAR
+void imprimirEmLargura_RS(struct nodo* raiz);
 
 #endif//REDBLACK_H

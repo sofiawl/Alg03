@@ -6,7 +6,15 @@
 #include "redblack.h"
 
 
-void matarProgramaFaltaMemoria(){};
+#define PRETO 1
+#define VERMELHO 0
+
+struct nodo *NIL = NULL;
+
+void matarProgramaFaltaMemoria(){
+    fprintf(stderr, "Falha ao alocar memoria.\n");
+    exit(1);
+};
 
 struct aluno* getAluno(){
     struct aluno* retorno = malloc(sizeof(struct aluno));
@@ -40,44 +48,12 @@ void imprimirDadosAluno(){
     return;
 }
 
-// inicializa o sentinela
-void initNIL(void){
-    NIL = malloc(sizeof(struct nodo));
-    if (!NIL){
-        fprintf(stderr, "Falha ao alocar memoria.\n");
-        exit(1);
-    }
-    
-    NIL->chave = INT_MIN;
-    NIL->pai = NIL->fe = NIL->fd = NIL;
-    NIL->cor = PRETO;
-}
 
-void endNIL(void){
-    if (NIL) {
-        free(NIL);
-        NIL = NULL; 
-    }
-}
-
-// libera árvore em pós ordem
-void liberarArvore(struct nodo** raiz){
-    if (*raiz == NIL)
-        return;
-
-    liberarArvore(&(*raiz)->fe);
-    liberarArvore(&(*raiz)->fd);
-
-    free(*raiz);
-
-    *raiz = NULL; 
-}
-
+// Alocar e inicializar um nodo vazio
 struct nodo* criarNodo(int chave){
     struct nodo* z = malloc(sizeof(struct nodo));
     if (!z){
-        fprintf(stderr, "Falha ao alocar memoria.\n");
-        exit(1);
+        matarProgramaFaltaMemoria();
     }
     z->chave = chave;
     z->pai = NIL;
@@ -87,22 +63,26 @@ struct nodo* criarNodo(int chave){
     return z;
 }
 
+// Rotacionar subárvore "raiz" para a esquerda 
 void rotacionarEsq(struct nodo** raiz, struct nodo *x){
     if (!raiz || !x) return;
 
-    // devo garantir que x nem y são sentinelas
     struct nodo* y = x->fd;
     x->fd = y->fe;
 
-    if (y->fe != NIL) // se fe não é sentinela
+    // Caso fe do fd de x não é sentinela
+    if (y->fe != NIL) 
         y->fe->pai = x;
 
     y->pai = x->pai;
 
-    if (x->pai == NIL) // se x for a raiz
+    // Caso x é a raiz
+    if (x->pai == NIL) 
         *raiz = y;
+    // Caso x é fe
     else if (x == x->pai->fe)
         x->pai->fe = y;
+    // Caso x é fd
     else 
         x->pai->fd = y;
     
@@ -110,22 +90,27 @@ void rotacionarEsq(struct nodo** raiz, struct nodo *x){
     x->pai = y;
 }
 
+
+// Rotacionar subárvore "raiz" para a diretita 
 void rotacionarDir(struct nodo** raiz, struct nodo* x){
     if (!raiz || !x) return;
 
-    // devo garantir que x nem y são sentinelas
     struct nodo* y = x->fe;
     x->fe = y->fd;
 
-    if (y->fd != NIL) // se fd não é sentinela 
+    // Caso fd do fe de x não é sentinela
+    if (y->fd != NIL) 
         y->fd->pai = x;
 
     y->pai = x->pai;
 
-    if (x->pai == NIL) // se x for a raiz
+    // Caso x é a raiz
+    if (x->pai == NIL) 
         *raiz = y;
+    // Caso x é fe
     else if (x == x->pai->fe)
         x->pai->fe = y;
+    // Casox é fd
     else 
         x->pai->fd = y;
     
@@ -134,37 +119,43 @@ void rotacionarDir(struct nodo** raiz, struct nodo* x){
     x->pai = y;
 }
 
+// Garantir que a Red Black mantenha suas propriedades depois de inserir novo nodo:
 void corrigirInserir(struct nodo** raiz, struct nodo* z){
     if (!raiz || !z) return;
 
     while(z->pai->cor == VERMELHO){
-        if (z->pai == z->pai->pai->fe) // pai de z é filho esquerdo
+        // Caso 1: pai de z é fe
+        if (z->pai == z->pai->pai->fe) 
         {
-            struct nodo* tio_z = z->pai->pai->fd; // z_tio é tio de z
-            if (tio_z->cor == VERMELHO) // pai e tio de z são vermelhos
+            struct nodo* tio_z = z->pai->pai->fd; 
+            // Caso 1.1: tio de z é vermelho
+            if (tio_z->cor == VERMELHO) 
             {
                 z->pai->cor  = PRETO;
                 tio_z->cor = PRETO;
                 z->pai->pai->cor = VERMELHO;
                 z = z->pai->pai;
             }
-            else // pai é vermelho e tio de z é preto
+            // Caso 1.2: tio de z é preto
+            else 
             {
-                // caso 1, z é filho direito
+                // Caso z é fd
                 if (z == z->pai->fd)
                 {
                     z = z->pai;
                     rotacionarEsq(raiz, z);
                 }
-                // caso 2, z é filho esquerdo ou filho direito
+
                 z->pai->cor = PRETO;
                 z->pai->pai->cor = VERMELHO;
                 rotacionarDir(raiz, z->pai->pai);
             }
         }  
-        else // pai de z é filho direito
+        // Caso 2: pai de z é fd
+        else 
         {
-            struct nodo* tio_z = z->pai->pai->fe; //
+            struct nodo* tio_z = z->pai->pai->fe; 
+            // Caso 2.1: tio de z é vermelho
             if (tio_z->cor == VERMELHO)
             {
                 z->pai->cor = PRETO;
@@ -172,15 +163,16 @@ void corrigirInserir(struct nodo** raiz, struct nodo* z){
                 z->pai->pai->cor = VERMELHO;
                 z = z->pai->pai;
             }
+            // Caso 2.2: tio de z é preto
             else
             {
-                //caso 1, z é filho esquerdo
+                // Caso z é fe
                 if (z == z->pai->fe)
                 {
                     z = z->pai;
                     rotacionarDir(raiz, z);
                 }
-                //caso 2, z é filho esquerdo ou direito
+
                 z->pai->cor = PRETO;
                 z->pai->pai->cor = VERMELHO;
                 rotacionarEsq(raiz, z->pai->pai);
@@ -191,11 +183,11 @@ void corrigirInserir(struct nodo** raiz, struct nodo* z){
     (*raiz)->cor = PRETO;
 }
 
-// retorna SENTINELA se não foi possível inserir
+// Inserir novo nodo, retornar SENTINELA se não foi possível inserir
 struct nodo* inserir(struct nodo** raiz, int chave){
     if (!raiz) return NIL;
 
-    // evita duplicata 
+    // Evitar duplicata 
     struct nodo *buscado = buscar(*raiz, chave);
     if(buscado != NIL){
         return NIL;
@@ -204,10 +196,13 @@ struct nodo* inserir(struct nodo** raiz, int chave){
     struct nodo* y = NIL;
     struct nodo* x = *raiz;
 
+    // Percorrer a raiz para buscar posição inicial do novo nodo
     while(x != NIL){
         y = x;
+        // Nodos a esquerda são menores que os pais
         if(chave < x->chave)
             x = x->fe;
+        // Nodos a direita são maiores que os pais
         else 
             x = x->fd;
     }
@@ -215,10 +210,13 @@ struct nodo* inserir(struct nodo** raiz, int chave){
     struct nodo* z = criarNodo(chave);
     z->pai = y;
 
+    // Caso pai do novo nodo é sentinela
     if(y == NIL)
         *raiz = z;         
+    // Caso novo nodo tenha chave MENOR que seu pai
     else if(chave < y->chave)
         y->fe = z;
+    // Caso novo nodo tenha chave MAIOR que seu pai
     else
         y->fd = z;
 
@@ -228,41 +226,47 @@ struct nodo* inserir(struct nodo** raiz, int chave){
     return z;
 }
 
-
+// Trocar o nodo u pelo nodo v, para excluir nodos
 void transplantar(struct nodo** raiz, struct nodo* u, struct nodo* v){
     if (!raiz || !u || !v) return;
     
+    // Caso u é a raiz
     if (u->pai == NIL)
         *raiz = v;
+    // Caso u é fe
     else if (u == u->pai->fe)
         u->pai->fe = v;
+    // Caso u é fd
     else 
         u->pai->fd = v;
     
     v->pai = u->pai;
 }
 
+// Restornar o nodo com menor chave da árvore
 struct nodo* min_arvore(struct nodo* raiz){
     if (!raiz) return NIL;
 
+    // Percorrer a árvore pelos nodos à esquerda
     while (raiz->fe != NIL)
         raiz = raiz->fe;
 
     return raiz;
 }
 
+// Garantir que Red Black mantenha suas propriedades depois de excluir novo nodo
 void corrigirExcluir(struct nodo** raiz, struct nodo* x){
     if (!raiz || !x) return;
 
-    // w é o irmão de x
+    // W é o irmão de x
     struct nodo *w;
 
     while (x->pai != NIL && x->cor == PRETO ){
-         // se x é filho esquerdo
+         // Caso 1: x é filho esquerdo
         if (x == x->pai->fe)
         {
             w = x->pai->fd;
-            // caso 01: irmão de x é vermelho
+            // Caso 1.1: w é vermelho
             if (w->cor == VERMELHO) 
             {
                 w->cor = PRETO;
@@ -270,15 +274,16 @@ void corrigirExcluir(struct nodo** raiz, struct nodo* x){
                 rotacionarEsq(raiz, x->pai);
                 w = x->pai->fd;
             } 
-            // caso 02: w é preto e seus filhos são pretos      
+            // Caso 1.2: w é preto e seus filhos são pretos      
             else if (w->fe->cor == PRETO && w->fd->cor == PRETO)
             {
                 w->cor = VERMELHO;
                 x = x->pai;
             }
+            // Caso 1.3: w é preto e seus filhos não são pretos
             else
             {
-                // caso 03: w é preto, w->fe é vermelho e w->fd é preto
+                // Caso 1.3.1: fd de w é preto
                if (w->fd->cor == PRETO)
                {
                     w->fe->cor = PRETO;
@@ -286,7 +291,7 @@ void corrigirExcluir(struct nodo** raiz, struct nodo* x){
                     rotacionarDir(raiz, w);
                     w = x->pai->fd;
                } 
-               // caso 04: w é preto e w->fd é vermelho
+
                w->cor = x->pai->cor;
                x->pai->cor = PRETO;
                w->fd->cor = PRETO;
@@ -294,11 +299,11 @@ void corrigirExcluir(struct nodo** raiz, struct nodo* x){
                x = *raiz;
             }
         }
-        // se x é filho direito
+        // Caso 2: x é filho direito
         else 
         {
             w = x->pai->fe;
-            // caso 01: irmão de x é vermelho
+            // Caso 2.1: w é vermelho
             if (w->cor == VERMELHO) 
             {
                 w->cor = PRETO;
@@ -306,15 +311,16 @@ void corrigirExcluir(struct nodo** raiz, struct nodo* x){
                 rotacionarEsq(raiz, x->pai);
                 w = x->pai->fe;
             } 
-            // caso 02: w é preto e seus filhos são pretos      
+            // Caso 2.2: w é preto e seus filhos são pretos      
             else if (w->fe->cor == PRETO && w->fd->cor == PRETO)
             {
                 w->cor = VERMELHO;
                 x = x->pai;
             }
+            // Caso 2.3: w é preto e seus filhos não são pretos
             else
             {
-                // caso 03: w é preto, w->fe é preto e w->fd é vermelho
+                // caso 2.3.1: fe de w é preto
                if (w->fe->cor == PRETO)
                {
                     w->fd->cor = PRETO;
@@ -322,7 +328,7 @@ void corrigirExcluir(struct nodo** raiz, struct nodo* x){
                     rotacionarDir(raiz, w);
                     w = x->pai->fe;
                } 
-               // caso 04: w é preto e w->fe é vermelho
+
                w->cor = x->pai->cor;
                x->pai->cor = PRETO;
                w->fe->cor = PRETO;
@@ -332,14 +338,14 @@ void corrigirExcluir(struct nodo** raiz, struct nodo* x){
         }
     }
 
-    // Coloquei isso depois, verificar se está correto
     x->cor = PRETO;
 }
 
-// retorna o número de nodos excluídos
+// Excluir nodo existente na árvore e retornar o número de nodos excluídos
 int excluir(struct nodo** raiz, int chave){
     if (!raiz) return -1;
 
+    // Percorrer a árvore para verificar existência do nodo
     struct nodo* z = buscar(*raiz, chave);
     if (z == NIL)
     {
@@ -347,30 +353,40 @@ int excluir(struct nodo** raiz, int chave){
     }
 
     struct nodo* y = z;
+    // X salva o filho (não sentinela) do nodo excluído para correção de excluir
     struct nodo* x;
+    // Guardar cor original do nodo excluído
     int corOriginal = y->cor;
 
+    // Caso fe de z é sentinela
     if (z->fe == NIL)
     {
         x = z->fd;
         transplantar(raiz, z, z->fd);
     }
+    // Caso fd de z é sentinela
     else if(z->fd == NIL)
     {
         x = z->fe;
         transplantar(raiz, z, z->fe);
     }
+    // Caso z tenha ambos filhos não sentinelas
     else 
     {
+        // Descobrir o nodo com menor chave da subárvore do fd de z 
         y = min_arvore(z->fd);
         corOriginal = y->cor;
         x = y->fd;
+
+        // Caso menor valor não é fd de z
         if (y != z->fd)
         {
+            // Trocar y pelo fd de y
             transplantar(raiz, y, y->fd);
             y->fd = z->fd;
             y->fd->pai = y; 
         }
+        // Caso menor valor é fd de z
         else
             x->pai = y;
 
@@ -380,6 +396,7 @@ int excluir(struct nodo** raiz, int chave){
         y->cor = z->cor;
     }
 
+    // Somente quando a cor inicial é preto é necessário corrigir
     if (corOriginal == PRETO)
         corrigirExcluir(raiz, x);
 
@@ -388,8 +405,7 @@ int excluir(struct nodo** raiz, int chave){
     return 1;
 }
 
-//retorna SENTINELA se não existe
-// Iterativo
+// Buscar nodo com chave "chave", restornar sentinela se não existir
 struct nodo* buscar(struct nodo* raiz, int chave){
     if (!raiz) return NULL;
 
@@ -404,8 +420,8 @@ struct nodo* buscar(struct nodo* raiz, int chave){
     return raiz;
 }
 
-// Recursivo
-struct nodo* buscar_RS(struct nodo* raiz, int chave){
+// Versão recursiva de buscar 
+struct nodo* buscar_R(struct nodo* raiz, int chave){
     if (!raiz) return NULL;
 
     if (raiz != NIL && chave == raiz->chave)
@@ -416,6 +432,7 @@ struct nodo* buscar_RS(struct nodo* raiz, int chave){
     return buscar(raiz->fd, chave);
 }
 
+// Imprimir valores das chaves em ordem (fundo esquerda, sobe, fundo direita)
 void imprimirEmOrdem(struct nodo* nodo){
     if (!nodo || nodo == NIL) return;
 
@@ -429,13 +446,12 @@ void imprimirEmOrdem(struct nodo* nodo){
 }
 
 // Versão iterativa da impressão em ordem
-void imprimirEmOrdem_RS(struct nodo* raiz){
+void imprimirEmOrdem_SR(struct nodo* raiz){
     if (!raiz || raiz == NIL) return;
     
     struct nodo **pilha = malloc(1000 * sizeof(struct nodo*));
     if (!pilha){
-        fprintf(stderr, "Falha ao alocar memoria.\n");
-        exit(1);
+        matarProgramaFaltaMemoria();
     }
     
     size_t topo = 0;
@@ -448,7 +464,7 @@ void imprimirEmOrdem_RS(struct nodo* raiz){
             atual = atual->fe;
         }
         
-        // Visita o nó
+        // Visitar o nó
         atual = pilha[--topo];
         printf("%d\t", atual->chave);
         
@@ -464,16 +480,93 @@ char getCor(struct nodo* raiz){
 }
 
 char getTipoFilho(struct nodo* raiz){
+    char tipo_filho;
+
     if (raiz->pai == NIL)
         return 's';
     else 
         return raiz->pai->fe == raiz ? 'e' : 'd';
 }
 
+// Imprimir valores das chaves em largura (raiz, filhos raiz, netos raiz ...)
+void imprimirEmLargura(struct nodo* raiz){
+    if (!raiz || raiz == NIL) return;
+    
+    // Fila para BFS - usando array circular simples
+    struct nodo **fila = malloc(1000 * sizeof(struct nodo*));
+    int *niveis = malloc(1000 * sizeof(int));
+    
+    if (!fila || !niveis){
+        matarProgramaFaltaMemoria();
+    }
+    
+    int inicio = 0, fim = 0;
+    int nivel_atual = 0;
+    bool primeiro_do_nivel = true;
+    
+    // Adicionar raiz na fila
+    fila[fim] = raiz;
+    niveis[fim] = 0;
+    fim++;
+    
+    // Enquanto fila não acabou
+    while(inicio < fim) {
+        struct nodo* atual = fila[inicio];
+        int nivel = niveis[inicio];
+        inicio++;
+        
+        // Se mudou de nível, imprimir nova linha
+        if (nivel != nivel_atual) {
+            printf("\n[%d]\t", nivel);
+            nivel_atual = nivel;
+            primeiro_do_nivel = false;
+        } else if (primeiro_do_nivel) {
+            printf("[%d]\t", nivel);
+            primeiro_do_nivel = false;
+        }
+        
+        // Imprimir o nó no formato: (COR)CHAVE [CHAVEPAI e/d]
+        printf("(%c)%d ", getCor(atual), atual->chave);    
+        printf("[%d%c]", atual->pai->chave, getTipoFilho(atual));
+        printf("\t");
+
+        // Adicionar primeiro filho esquerdo na fila
+        if (atual->fe != NIL) {
+            fila[fim] = atual->fe;
+            niveis[fim] = nivel + 1;
+            fim++;
+        }
+        
+        // Adicionar depois filho direito na fila
+        if (atual->fd != NIL) {
+            fila[fim] = atual->fd;
+            niveis[fim] = nivel + 1;
+            fim++;
+        }
+    }
+    
+    printf("\n");
+    free(fila);
+    free(niveis);
+}
+
+// Calcular altura da Árvore
+// para calcular altura preta da Árvore basta percorrer UM caminho e somar nodos número de nodos pretos
+int calcularAltura(struct nodo* raiz) {
+    if (!raiz || raiz == NIL) return -1;
+    
+    int alt_esq = calcularAltura(raiz->fe);
+    int alt_dir = calcularAltura(raiz->fd);
+    
+    return 1 + (alt_esq > alt_dir ? alt_esq : alt_dir);
+}
+
+
+// Imprimir o nodo no formato: (COR)CHAVE [CHAVEPAI e/d]
 void imprimirNivel(struct nodo* raiz, int nivel_alvo, int nivel_atual) {
     if (!raiz || raiz == NIL) return;
     
-    // Se chegou no nível desejado, imprime
+
     if (nivel_atual == nivel_alvo) {
         printf("(%c)%d\t", getCor(raiz), raiz->chave);
         printf(" [%d%c]", raiz->pai->chave, getTipoFilho(raiz));
@@ -487,21 +580,13 @@ void imprimirNivel(struct nodo* raiz, int nivel_alvo, int nivel_atual) {
         imprimirNivel(raiz->fd, nivel_alvo, nivel_atual + 1);
 }
 
-int calcularAltura(struct nodo* raiz) {
-    if (!raiz || raiz == NIL) return -1;
-    
-    int alt_esq = calcularAltura(raiz->fe);
-    int alt_dir = calcularAltura(raiz->fd);
-    
-    return 1 + (alt_esq > alt_dir ? alt_esq : alt_dir);
-}
-
-void imprimirEmLargura(struct nodo* raiz){
+// Versão recursiva da impressão em largura
+void imprimirEmLargura_R(struct nodo* raiz){
     if (!raiz) return;
 
     int altura = calcularAltura(raiz);
     
-    // Para cada nível, chama a função que imprime apenas esse nível
+    // Para cada nível, chamar a função que imprime apenas esse nível
     for (int nivel = 0; nivel <= altura; nivel++) {
         printf("[%d]", nivel);
         imprimirNivel(raiz, nivel, 0);
@@ -509,63 +594,6 @@ void imprimirEmLargura(struct nodo* raiz){
     }
 }
 
-// Impressão em largura com formato especificado
-void imprimirEmLargura_RS(struct nodo* raiz){
-    if (!raiz || raiz == NIL) return;
-    
-    // Fila para BFS - usando array circular simples
-    struct nodo **fila = malloc(1000 * sizeof(struct nodo*));
-    int *niveis = malloc(1000 * sizeof(int));
-    
-    if (!fila || !niveis){
-        fprintf(stderr, "Falha ao alocar memoria.\n");
-        exit(1);
-    }
-    
-    int inicio = 0, fim = 0;
-    int nivel_atual = 0;
-    bool primeiro_do_nivel = true;
-    
-    // Adiciona raiz na fila
-    fila[fim] = raiz;
-    niveis[fim] = 0;
-    fim++;
-    
-    while(inicio < fim) {
-        struct nodo* atual = fila[inicio];
-        int nivel = niveis[inicio];
-        inicio++;
-        
-        // Se mudou de nível, imprime nova linha
-        if (nivel != nivel_atual) {
-            printf("\n[%d]\t", nivel);
-            nivel_atual = nivel;
-            primeiro_do_nivel = false;
-        } else if (primeiro_do_nivel) {
-            printf("[%d]\t", nivel);
-            primeiro_do_nivel = false;
-        }
-        
-        // Imprime o nó no formato: (COR)CHAVE [CHAVEPAI e/d]
-        printf("(%c)%d ", getCor(atual), atual->chave);    
-        printf("[%d%c]", atual->pai->chave, getTipoFilho(atual));
-        printf("\t");
 
-        // Adiciona filhos na fila
-        if (atual->fe != NIL) {
-            fila[fim] = atual->fe;
-            niveis[fim] = nivel + 1;
-            fim++;
-        }
-        
-        if (atual->fd != NIL) {
-            fila[fim] = atual->fd;
-            niveis[fim] = nivel + 1;
-            fim++;
-        }
-    }
-    
-    printf("\n");
-    free(fila);
-    free(niveis);
-}
+
+
