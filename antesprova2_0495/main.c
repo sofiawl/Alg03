@@ -48,7 +48,7 @@ int main(){
 	
 	initNIL();
 	struct nodo* raiz = NIL;
-
+	
 	imprimirDadosAluno();
 
 	char linha[256];  
@@ -56,7 +56,7 @@ int main(){
 	int val;
 
 	while(fgets(linha, sizeof(linha), stdin)) {
-	    // Remove o \n se existir
+	    // Remover o \n se existir
 	    linha[strcspn(linha, "\n")] = '\0';
 	
 	    if(sscanf(linha, " %c", &op) != 1) {
@@ -114,6 +114,5 @@ int main(){
 
 	liberarArvore(&raiz);
 	endNIL();
-
 	return 0;
 }

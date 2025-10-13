@@ -123,7 +123,7 @@ void rotacionarDir(struct nodo** raiz, struct nodo* x){
 void corrigirInserir(struct nodo** raiz, struct nodo* z){
     if (!raiz || !z) return;
 
-    while(z->pai->cor == VERMELHO){
+    while(z->pai->cor == VERMELHO && z->pai->pai != NIL){
         // Caso 1: pai de z é fe
         if (z->pai == z->pai->pai->fe) 
         {
@@ -199,10 +199,10 @@ struct nodo* inserir(struct nodo** raiz, int chave){
     // Percorrer a raiz para buscar posição inicial do novo nodo
     while(x != NIL){
         y = x;
-        // Nodos a esquerda são menores que os pais
+        // Nodos a esquerda são menores que o pai
         if(chave < x->chave)
             x = x->fe;
-        // Nodos a direita são maiores que os pais
+        // Nodos a direita são maiores que o pai
         else 
             x = x->fd;
     }
@@ -420,18 +420,6 @@ struct nodo* buscar(struct nodo* raiz, int chave){
     return raiz;
 }
 
-// Versão recursiva de buscar 
-struct nodo* buscar_R(struct nodo* raiz, int chave){
-    if (!raiz) return NULL;
-
-    if (raiz != NIL && chave == raiz->chave)
-        return raiz;
-
-    if (chave < raiz->chave)
-        return buscar(raiz->fe, chave);
-    return buscar(raiz->fd, chave);
-}
-
 // Imprimir valores das chaves em ordem (fundo esquerda, sobe, fundo direita)
 void imprimirEmOrdem(struct nodo* nodo){
     if (!nodo || nodo == NIL) return;
@@ -443,6 +431,94 @@ void imprimirEmOrdem(struct nodo* nodo){
         imprimirEmOrdem(nodo->fd);
     }
 
+}
+
+char getCor(struct nodo* raiz){
+    return raiz->cor == PRETO ? 'B' : 'R';
+}
+
+char getTipoFilho(struct nodo* raiz){
+    char tipo_filho;
+
+    if (raiz->pai == NIL)
+        return 's';
+    else 
+        return raiz->pai->fe == raiz ? 'e' : 'd';
+}
+
+void realocaFila(struct nodo **fila, int *cap){
+    *cap *= 2; // dobra a capacidade
+    struct nodo **novaFila = realloc(fila, *cap * sizeof(struct nodo*));
+    if (!novaFila) matarProgramaFaltaMemoria();
+    fila = novaFila;
+}
+
+// Imprimir valores das chaves em largura (raiz, filhos raiz, netos raiz ...)
+void imprimirEmLargura(struct nodo* raiz){
+    if (!raiz || raiz == NIL) return;
+    
+    int cap = 128;
+    struct nodo **fila = malloc(cap * sizeof(struct nodo*));
+    
+    if (!fila){
+        matarProgramaFaltaMemoria();
+    }
+    
+    int inicio = 0, fim = 0;
+    int nivel = 0;
+    int nodos_nivel_atual = 1, nodos_prox_nivel = 0;
+
+    // Adicionar raiz na fila
+    fila[fim++] = raiz;
+    
+     // Cabeçalho do nível da raiz
+    printf("[%d]\t", nivel);
+
+    // Enquanto fila não acabou
+    while(inicio < fim) {
+        struct nodo* atual = fila[inicio++];
+        nodos_nivel_atual--;
+
+        // Imprime o nó: (COR)CHAVE [CHAVEPAI e/d]
+        printf("(%c)%d ", getCor(atual), atual->chave);
+        printf("[%d%c]\t", atual->pai->chave, getTipoFilho(atual));
+        
+
+        // Enfileira filhos e conta nós do próximo nível
+        if (atual->fe != NIL) {
+            if (fim >= cap) { realocaFila(fila, &cap); }
+            fila[fim++] = atual->fe;
+            nodos_prox_nivel++;
+        }
+        if (atual->fd != NIL) {
+            if (fim >= cap) { realocaFila(fila, &cap); }
+            fila[fim++] = atual->fd;
+            nodos_prox_nivel++;
+        }
+
+        // Se acabou o nível atual, quebra linha e prepara o próximo
+        if (nodos_nivel_atual == 0 && inicio < fim) {
+            nivel++;
+            printf("\n[%d]\t", nivel);
+            nodos_nivel_atual = nodos_prox_nivel;
+            nodos_prox_nivel  = 0;
+        }
+    }
+    
+    printf("\n");
+    free(fila);
+}
+
+// Versão recursiva de buscar 
+struct nodo* buscar_R(struct nodo* raiz, int chave){
+    if (!raiz) return NULL;
+
+    if (raiz != NIL && chave == raiz->chave)
+        return raiz;
+
+    if (chave < raiz->chave)
+        return buscar(raiz->fe, chave);
+    return buscar(raiz->fd, chave);
 }
 
 // Versão iterativa da impressão em ordem
@@ -473,81 +549,6 @@ void imprimirEmOrdem_SR(struct nodo* raiz){
     }
     
     free(pilha);
-}
-
-char getCor(struct nodo* raiz){
-    return raiz->cor == PRETO ? 'B' : 'R';
-}
-
-char getTipoFilho(struct nodo* raiz){
-    char tipo_filho;
-
-    if (raiz->pai == NIL)
-        return 's';
-    else 
-        return raiz->pai->fe == raiz ? 'e' : 'd';
-}
-
-// Imprimir valores das chaves em largura (raiz, filhos raiz, netos raiz ...)
-void imprimirEmLargura(struct nodo* raiz){
-    if (!raiz || raiz == NIL) return;
-    
-    // Fila para BFS - usando array circular simples
-    struct nodo **fila = malloc(1000 * sizeof(struct nodo*));
-    int *niveis = malloc(1000 * sizeof(int));
-    
-    if (!fila || !niveis){
-        matarProgramaFaltaMemoria();
-    }
-    
-    int inicio = 0, fim = 0;
-    int nivel_atual = 0;
-    bool primeiro_do_nivel = true;
-    
-    // Adicionar raiz na fila
-    fila[fim] = raiz;
-    niveis[fim] = 0;
-    fim++;
-    
-    // Enquanto fila não acabou
-    while(inicio < fim) {
-        struct nodo* atual = fila[inicio];
-        int nivel = niveis[inicio];
-        inicio++;
-        
-        // Se mudou de nível, imprimir nova linha
-        if (nivel != nivel_atual) {
-            printf("\n[%d]\t", nivel);
-            nivel_atual = nivel;
-            primeiro_do_nivel = false;
-        } else if (primeiro_do_nivel) {
-            printf("[%d]\t", nivel);
-            primeiro_do_nivel = false;
-        }
-        
-        // Imprimir o nó no formato: (COR)CHAVE [CHAVEPAI e/d]
-        printf("(%c)%d ", getCor(atual), atual->chave);    
-        printf("[%d%c]", atual->pai->chave, getTipoFilho(atual));
-        printf("\t");
-
-        // Adicionar primeiro filho esquerdo na fila
-        if (atual->fe != NIL) {
-            fila[fim] = atual->fe;
-            niveis[fim] = nivel + 1;
-            fim++;
-        }
-        
-        // Adicionar depois filho direito na fila
-        if (atual->fd != NIL) {
-            fila[fim] = atual->fd;
-            niveis[fim] = nivel + 1;
-            fim++;
-        }
-    }
-    
-    printf("\n");
-    free(fila);
-    free(niveis);
 }
 
 // Calcular altura da Árvore

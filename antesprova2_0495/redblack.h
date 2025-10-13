@@ -36,13 +36,13 @@ struct nodo* buscar(struct nodo* raiz, int chave);
 
 void imprimirEmOrdem(struct nodo* nodo);
 // TESTAR E TIRAR
-void imprimirEmOrdem_RS(struct nodo* nodo);
+void imprimirEmOrdem_SR(struct nodo* nodo);
 
 // O(n²)
 void imprimirEmLargura(struct nodo* raiz);
 // O(n)
 
 //TESTAR E TIRAR
-void imprimirEmLargura_RS(struct nodo* raiz);
+void imprimirEmLargura_R(struct nodo* raiz);
 
 #endif//REDBLACK_H
