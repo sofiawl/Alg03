@@ -63,7 +63,7 @@ struct nodo* criarNodo(int chave){
     return z;
 }
 
-// Rotacionar subárvore "raiz" para a esquerda 
+// Rotacionar subárvore x para a esquerda (x troca de posição com seu fd)
 void rotacionarEsq(struct nodo** raiz, struct nodo *x){
     if (!raiz || !x) return;
 
@@ -91,7 +91,7 @@ void rotacionarEsq(struct nodo** raiz, struct nodo *x){
 }
 
 
-// Rotacionar subárvore "raiz" para a diretita 
+// Rotacionar subárvore x para a direita (x troca de posição com seu fe)
 void rotacionarDir(struct nodo** raiz, struct nodo* x){
     if (!raiz || !x) return;
 
@@ -123,7 +123,7 @@ void rotacionarDir(struct nodo** raiz, struct nodo* x){
 void corrigirInserir(struct nodo** raiz, struct nodo* z){
     if (!raiz || !z) return;
 
-    while(z->pai->cor == VERMELHO && z->pai->pai != NIL){
+    while(z->pai->cor == VERMELHO){
         // Caso 1: pai de z é fe
         if (z->pai == z->pai->pai->fe) 
         {
@@ -240,7 +240,7 @@ void transplantar(struct nodo** raiz, struct nodo* u, struct nodo* v){
     else 
         u->pai->fd = v;
     
-    v->pai = u->pai;
+    v->pai = u->pai; //aqui sentinela pode receber um novo pai
 }
 
 // Restornar o nodo com menor chave da árvore
@@ -353,7 +353,7 @@ int excluir(struct nodo** raiz, int chave){
     }
 
     struct nodo* y = z;
-    // X salva o filho (não sentinela) do nodo excluído para correção de excluir
+    // X salva o filho do nodo excluído para correção de excluir
     struct nodo* x;
     // Guardar cor original do nodo excluído
     int corOriginal = y->cor;

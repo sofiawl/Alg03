@@ -1,133 +1,72 @@
-//TESTES FUNÇÃO EXCLUIR:
-//remover folha vermelha (sem correção necessária)
-i 50
-i 30
-i 70
-i 20
-i 40
-e
-l
-r 40
-e
-l
-f
-
-//remover nodo com um filho, filho é fe
-i 50
-i 30
-i 70
-i 20
-i 40
-i 35
-e
-l
-r 40
-e
-l
-f
-
-//remover nodo com um filho, filho é fd
-
-//remover nodo com dois filhos
-i 50
-i 30
-i 70
-i 20
-i 40
-i 60
-i 80
-e
-l
-r 70
-e
-l
-f
-##resolvi erro, min_arvore deve ser feita em z->fd, não na raiz
-
-//remover nodo não existente
-i 50
-i 30
-r 100
-e
-l
-f
-
-//remover raiz com dois filhos
-i 50
-i 30
-i 70
+Caso 1.1: Árvore 10(B), 5(B), 20(R), 15(B), 25(B) → excluir 5
 i 10
-i 80
-e
-l
-r 50
-e
-l
-f
-
-//TESTAR CORRIGIR EXCLUIR
-//irmão do excluido é vermelho
-i 50
-i 30
-i 70
+i 5
 i 20
-i 40
-i 60
-i 80
-i 65
-e
+i 15
+i 25
 l
-r 60
-e
+r 10
 l
 f
-## resolvi erro, 65 etava continuando vermelho mesmo quando 60 foi removido e 65 virou filho de 70 que é vermelho
-## coloquei no final de corrigirexcluir para atualizar toda cor de x para preto
 
-//irmão e filhos do excluido são pretos
-i 50
-i 30
-i 70
+saída:
+[0]     (B)10 [-2147483648s]
+[1]     (B)5 [10e]      (B)20 [10d]
+[2]     (R)15 [20e]     (R)25 [20d]
+
+[0]     (B)15 [-2147483648s]
+[1]     (B)5 [15e]      (B)20 [15d]
+[2]     (R)25 [20d]
+
+Caso 1.2: Árvore 10(B), 5(B), 20(B) → excluir 5
+i 10
+i 5
 i 20
-i 40
-i 60
-i 80
-e
 l
-r 60
-e
-l
+r 5
+l 
 f
 
-//irmão de w é preto, fe é vermelho e fd é preto
-i 50
-i 30
-i 70
+saída:
+
+[0]   (B)10 [-2147483648s]
+[1]     (R)5 [10e]      (R)20 [10d]
+
+[0]     (B)10 [-2147483648s]
+[1]     (R)20 [10d]
+
+Caso 1.3: Árvore 20(B), 10(B), 30(B), 35(R) → excluir 10
 i 20
-i 40
-i 60
-i 80
-i 75
-e
-l
-r 60
-e
-l
-f
-
-//irmão de w é preto, fd é preto
-i 50
+i 10
 i 30
-i 70
-i 20
-i 40
-i 60
-i 80
-i 85
-e
+i 35
 l
-r 60
-e
+r 10
 l
 f
 
+saída:
+[0]    (B)20 [-2147483648s]
+[1]     (B)10 [20e]     (B)30 [20d]
+[2]     (R)35 [30d]
+
+[0]     (B)30 [-2147483648s]
+[1]     (B)20 [30e]     (B)35 [30d]
+
+Caso 1.3.1: Árvore 20(B), 10(B), 30(B), 25(R) → excluir 10
+i 20
+i 10
+i 30
+i 25
+l
+r 10
+l
+f
+
+saída: 
+[0]    (B)20 [-2147483648s]
+[1]     (B)10 [20e]     (B)30 [20d]
+[2]     (R)25 [30e]
+
+[0]     (B)25 [-2147483648s]
+[1]     (B)20 [25e]     (B)30 [25d]

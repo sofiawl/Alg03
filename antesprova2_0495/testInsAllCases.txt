@@ -1,11 +1,9 @@
-// pai e tio são vermelhos
 
-// 1 PAI DE Z É FE
-// 1.1 TIO É VERMELHO
+// 1. TIO É VERMELHO
 i 50
 i 30
 i 70
-i 20
+i 20 aqui ocorre o caso
 e
 l
 f
@@ -16,107 +14,29 @@ saida:
 [1]    (R)30 [50e]    (R)70 [50d]
 [2]    (B)20 [30e]
 
-// 1.2 TIO É PRETO
-// 1.2.1 Z É FILHO DIREITO (entra no if)
+// 2. TIO É PRETO 
+// 2.1 Z É FILHO OPOSTO DO PAI (se pai fe, então z é fd)
 i 10
 i 5
-i 15
-i 1
-i 7
-i 6
+i 7 aqui ocorre o caso
 e
 l
 f
 
 saida:
-1   5   6   7   10  15       
+5       7       10
+[0]     (B)7 [-2147483648s]
+[1]     (R)5 [7e]       (R)10 [7d]
+
+// 2.2 Z É FILHO IGUAL DO PAI
+i 5
+i 10
+i 15 aqui ocorre o caso
+e
+l
+f
+
+saida:
+5       10      15
 [0]     (B)10 [-2147483648s]
-[1]     (R)5 [10e]      (B)15 [10d]
-[2]     (B)1 [5e]       (B)7 [5d]
-[3]     (R)6 [7e]
-
-// 1.2.2 Z É FILHO ESQUERDO
-i 10
-i 5
-i 15
-i 12
-i 18
-i 11
-e
-l
-f
-
-saida:
-10   30   50   70   
-[0]    (B)30 [-2147483648s]
-[1]    (R)10 [30e]    (R)50 [30d]
-[2]    (B)70 [50d]
-
-// 2 PAI DE Z É FD
-// 1.1 TIO É VERMELHO
-i 50
-i 30
-i 70
-i 80
-e
-l
-f
-
-saida:
-30   50   70   80   
-[0]    (B)50 [-2147483648s]
-[1]    (R)30 [50e]    (R)70 [50d]
-[2]    (B)80 [70d]
-
-// 1.2 TIO É PRETO
-// 1.2.1 Z É FILHO ESQUERDO (entra no if)
-i 50
-i 30
-i 70
-i 60
-e
-l
-f
-
-saida:
-30   50   60   70   
-[0]    (B)60 [-2147483648s]
-[1]    (R)50 [60e]    (R)70 [60d]
-[2]    (B)30 [50e]
-
-// 1.2.2 Z É FILHO DIREITO
-i 50
-i 30
-i 70
-i 90
-e
-l
-f
-
-saida:
-30   50   70   90   
-[0]    (B)70 [-2147483648s]
-[1]    (R)50 [70e]    (R)90 [70d]
-[2]    (B)30 [50e]
-
-//teste de stress
-i 40
-i 20
-i 60
-i 10
-i 50
-i 80
-i 70
-i 30
-i 55
-i 5
-e
-l
-f
-
-saida:
-5   10   20   30   40   50   55   60   70   80   
-[0]    (B)40 [-2147483648s]
-[1]    (B)20 [40e]    (B)60 [40d]
-[2]    (R)10 [20e]    (R)30 [20d]    (R)50 [60e]    (B)80 [60d]
-[3]    (B)5 [10e]    (B)55 [50d]    (R)70 [80e]
+[1]     (R)5 [10e]      (R)15 [10d]
