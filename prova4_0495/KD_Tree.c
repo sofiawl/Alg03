@@ -3,7 +3,7 @@
 #include <math.h>
 #include "KD_Tree.h"
 
-void falhaMemoria(){
+void matarProgramaFaltaMemoria(){
     fprintf(stderr, "Falha ao alocar memória.\n");
     exit(1);
 }
@@ -12,6 +12,75 @@ void falhaScanf(){
     fprintf(stderr, "Falha ao ler.\n");
     exit(1);
 }
+
+void imprimirNodo(struct nodo *nodo){
+    printf("%f ", nodo->chaves[0]);
+    for (size_t i=1; i < nodo->numDims; i++){
+        printf("%f ", nodo->chaves[0]);
+    }
+    printf("\n");
+}
+
+void realocaFila(struct nodo **fila, int *cap){
+    *cap *= 2; // dobra a capacidade
+    struct nodo **novaFila = realloc(fila, *cap * sizeof(struct nodo*));
+    if (!novaFila) matarProgramaFaltaMemoria();
+    fila = novaFila;
+}
+
+// Imprimir valores das chaves em largura (raiz, filhos raiz, netos raiz ...)
+void imprimirEmLargura(struct nodo* raiz){
+    if (!raiz || raiz == NULL) return;
+    
+    int cap = 128;
+    struct nodo **fila = malloc(cap * sizeof(struct nodo*));
+    
+    if (!fila) matarProgramaFaltaMemoria();
+    
+    
+    int inicio = 0, fim = 0;
+    int nivel = 0;
+    int nodos_nivel_atual = 1, nodos_prox_nivel = 0;
+
+    // Adicionar raiz na fila
+    fila[fim++] = raiz;
+    
+     // Cabeçalho do nível da raiz
+    printf("[%d]\t", nivel);
+
+    // Enquanto fila não acabou
+    while(inicio < fim) {
+        struct nodo* atual = fila[inicio++];
+        nodos_nivel_atual--;
+
+        // Imprime o nodo:
+        imprimirNodo(atual);
+
+        // Enfileira filhos e conta nós do próximo nível
+        if (atual->fe != NULL) {
+            if (fim >= cap)  realocaFila(fila, &cap); 
+            fila[fim++] = atual->fe;
+            nodos_prox_nivel++;
+        }
+        if (atual->fd != NULL) {
+            if (fim >= cap)  realocaFila(fila, &cap); 
+            fila[fim++] = atual->fd;
+            nodos_prox_nivel++;
+        }
+
+        // Se acabou o nível atual, quebra linha e prepara o próximo
+        if (nodos_nivel_atual == 0 && inicio < fim) {
+            nivel++;
+            printf("\n[%d]\t", nivel);
+            nodos_nivel_atual = nodos_prox_nivel;
+            nodos_prox_nivel  = 0;
+        }
+    }
+    
+    printf("\n");
+    free(fila);
+}
+
 
 // Troca dois valores de um vetor
 void trocar(void **vet, size_t i, size_t i2)
@@ -34,15 +103,15 @@ size_t particionar(float **vetNodos, size_t *vetClasses, size_t coord, size_t es
 	for (size_t i = esq; i < dir; i++) {
 		// Elementos menores ou iguais ao pivo ficam a esquerda do vetor
 		if (*vetNodos[i] <= pivo[coord]) {
-			trocar(*vetNodos, i, m);
-			trocar(vetClasses, i, m);
+			trocar((void **)*vetNodos, i, m);
+			trocar((void **)vetClasses, i, m);
 			m++;
 		}
 	}
 
     // Pivo assume posição correta
-	trocar(vetNodos, m, dir);
-	trocar(&vetClasses, m, dir);
+	trocar((void **)*vetNodos, m, dir);
+	trocar((void **)vetClasses, m, dir);
 
 	return m;
 }
@@ -89,9 +158,13 @@ struct nodo *construir(float **vetNodos, size_t *vetClasses, size_t coord, size_
 
 /* – Buscar: recebe um vetor de coordenadas, e retorna um ponteiro para o nodo que contém
 essas coordenadas, ou NULL caso não exista. */
-struct nodo* buscar(struct nodo *raiz, float *lerPonto){
-
-    return raiz;
+struct nodo* buscar(struct nodo *nodo, float *lerPonto, size_t coord, size_t k){
+    if (!nodo || nodo->chaves == lerPonto)
+        return nodo;
+        
+    if (lerPonto[coord] < nodo->chaves[coord])
+        return buscar(nodo->fe, lerPonto, (coord+1)%k, k);
+    return buscar(nodo->fd, lerPonto, (coord+1)%k, k);
 }
 
 /* – z-vizinhos: recebe um vetor de coordenadas, e retorna um vetor de ponteiros de tamanho

@@ -10,12 +10,12 @@ struct nodo{
     size_t classe;
 };
 
-void falhaMemoria();
+void matarProgramaFaltaMemoria();
 void falhaScanf();
-void imprimirNodo(struct nodo *nodo);
-void ordenar(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, size_t dir);
+void imprimirEmLargura(struct nodo *raiz);
+void ordenarQS(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, size_t dir);
 struct nodo* construir(float **vetNodos, size_t *vetClasses, size_t coord, size_t k, size_t esq, size_t dir);
-struct nodo* buscar(struct nodo *raiz, float *lerPonto);
+struct nodo* buscar(struct nodo *nodo, float *lerPonto, size_t coord, size_t k);
 struct nodo** z_vizinhos();
 
 #endif //__KD_TREE_H__
