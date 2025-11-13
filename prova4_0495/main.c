@@ -6,33 +6,34 @@
 
 int main(){
 
-	char linha[256];  
-	char op;
+    char linha[256];  
+    char op;
     size_t n, k;
 
-    // verificar quantidade mínhima possível de pontos
+    // verificar quantidade mínima possível de pontos
     printf("Insira N e K.\n");
-    if (scanf("%ld %ld", &n, &k) != 1){
+    if (scanf("%ld %ld", &n, &k) != 2){  
         fprintf(stderr, "Número inválido\n");
+        return 1;
     }
 
     size_t *vetClasses = malloc(sizeof(size_t) * n);
     if (!vetClasses) matarProgramaFaltaMemoria();
 
-    float **vetNodos = malloc(sizeof(size_t *) * n);
+    float **vetNodos = malloc(sizeof(float *) * n);  
     if (!vetNodos) matarProgramaFaltaMemoria();
 
     printf("Insira os pontos.\n");
     for(size_t i=0; i < n; i++){
 
-        *vetNodos = malloc(sizeof(size_t) * k);
-        if (!*vetNodos) matarProgramaFaltaMemoria();
+        vetNodos[i] = malloc(sizeof(float) * k); 
+        if (!vetNodos[i]) matarProgramaFaltaMemoria();
 
         for(size_t j=0; j < k; j++){
-            if (!scanf("%f", &vetNodos[i][j])) falhaScanf();
+            if (scanf("%f", &vetNodos[i][j]) != 1) falhaScanf();
         }
 
-        if (!scanf("%ld", &vetClasses[i])) falhaScanf();
+        if (scanf("%ld", &vetClasses[i]) != 1) falhaScanf();
     }
     
 
@@ -41,6 +42,10 @@ int main(){
 
     float *lerPonto = malloc(sizeof(float) * k);
     if (!lerPonto) matarProgramaFaltaMemoria();
+
+    // Limpar buffer antes de ler linhas
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
 
     while(fgets(linha, sizeof(linha), stdin)) {
         // Remover o \n
@@ -82,20 +87,35 @@ int main(){
             }
 
             case 'l':
-                // imprimirEmLargura(raiz);
+                imprimirEmLargura(raiz);
                 break;
 
             case 'z': {
                 // z 3 5.0 2.3 3.3 1.0
-                int numVizinhos;
+                memset(lerPonto, 0, sizeof(float) * k);
+
+                size_t numVizinhos;
                 char *ptr = linha + 1; // pula o 'z'
                 int chars_consumidos;
 
-                if (sscanf(ptr, "%d%n", &numVizinhos, &chars_consumidos) != 1) {
+                if (sscanf(ptr, "%ld%n", &numVizinhos, &chars_consumidos) != 1) {
                     fprintf(stderr, "Formato inválido\n");
                     break;
                 }
+               
+
                 ptr += chars_consumidos;
+
+                struct nodo **vetVizinhos = malloc(sizeof(struct nodo *) * numVizinhos);
+                if (!vetVizinhos) matarProgramaFaltaMemoria();
+
+                float *vetDistancias = malloc(sizeof(float) * numVizinhos);
+                if (!vetDistancias) matarProgramaFaltaMemoria();
+
+                for (size_t i = 0; i < numVizinhos; i++) {
+                    vetVizinhos[i] = NULL;
+                    vetDistancias[i] = -1.0f;
+                }
 
                 int lidos = 0;
                 for (size_t i = 0; i < k; i++) {
@@ -107,9 +127,18 @@ int main(){
                     ptr += chars_consumidos;
                 }
 
-                if (lidos == -1) break;
+                if (lidos == -1) {
+                    free(vetVizinhos);
+                    free(vetDistancias);
+                    break;
+                }
 
-                // zVizinhos(raiz, lerPonto, numVizinhos, k);
+                int nodosEncontrados = 0;
+                z_vizinhos(raiz, lerPonto, k, numVizinhos, vetVizinhos, vetDistancias, &nodosEncontrados);
+                imprimeZVizinhos(vetVizinhos, vetDistancias, nodosEncontrados, k);
+
+                free(vetVizinhos);
+                free(vetDistancias);
                 break;
             }
 
@@ -119,10 +148,13 @@ int main(){
     }
 
     free(lerPonto);
-    
     free(vetClasses);
-    for (size_t i=0; i < n;i++)
-        free(*vetNodos);
+    
+    for (size_t i=0; i < n; i++)
+        free(vetNodos[i]);
     free(vetNodos);
+    
+    destruirPosOrdem(raiz);
+    
     return 0;
 }

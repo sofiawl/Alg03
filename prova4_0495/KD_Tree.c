@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <float.h>
 #include "KD_Tree.h"
 
 void matarProgramaFaltaMemoria(){
@@ -13,67 +14,80 @@ void falhaScanf(){
     exit(1);
 }
 
-void imprimirNodo(struct nodo *nodo){
-    printf("%f ", nodo->chaves[0]);
-    for (size_t i=1; i < nodo->numDims; i++){
-        printf("%f ", nodo->chaves[0]);
+// ========== VERSÃO ALTERNATIVA: COM CLASSE ==========
+
+/**
+ * Imprime nodo com classe
+ */
+void imprimirNodo(struct nodo *nodo) {
+    if (!nodo) {
+        printf("NULL ");
+        return;
     }
-    printf("\n");
+    
+    printf("(");
+    for (size_t i = 0; i < nodo->numDims; i++) {
+        printf("%.1f", nodo->chaves[i]);
+        if (i < nodo->numDims - 1) {
+            printf(", ");
+        }
+    }
+    printf(", c%ld) ", nodo->classe);
 }
 
-void realocaFila(struct nodo **fila, int *cap){
-    *cap *= 2; // dobra a capacidade
-    struct nodo **novaFila = realloc(fila, *cap * sizeof(struct nodo*));
-    if (!novaFila) matarProgramaFaltaMemoria();
-    fila = novaFila;
+
+void realocaFila(struct nodo ***fila, int *cap) {
+    *cap *= 2;
+    *fila = realloc(*fila, (*cap) * sizeof(struct nodo*));
+    if (!*fila) {
+        fprintf(stderr, "Erro ao realocar fila\n");
+        exit(1);
+    }
 }
 
-// Imprimir valores das chaves em largura (raiz, filhos raiz, netos raiz ...)
-void imprimirEmLargura(struct nodo* raiz){
-    if (!raiz || raiz == NULL) return;
+void imprimirEmLargura(struct nodo* raiz) {
+    if (!raiz) {
+        printf("Árvore vazia\n");
+        return;
+    }
     
     int cap = 128;
     struct nodo **fila = malloc(cap * sizeof(struct nodo*));
-    
-    if (!fila) matarProgramaFaltaMemoria();
-    
+    if (!fila) {
+        fprintf(stderr, "Erro ao alocar fila\n");
+        exit(1);
+    }
     
     int inicio = 0, fim = 0;
     int nivel = 0;
     int nodos_nivel_atual = 1, nodos_prox_nivel = 0;
-
-    // Adicionar raiz na fila
-    fila[fim++] = raiz;
     
-     // Cabeçalho do nível da raiz
+    fila[fim++] = raiz;
     printf("[%d]\t", nivel);
-
-    // Enquanto fila não acabou
-    while(inicio < fim) {
+    
+    while (inicio < fim) {
         struct nodo* atual = fila[inicio++];
         nodos_nivel_atual--;
-
-        // Imprime o nodo:
+        
         imprimirNodo(atual);
-
-        // Enfileira filhos e conta nós do próximo nível
+        
         if (atual->fe != NULL) {
-            if (fim >= cap)  realocaFila(fila, &cap); 
+            if (fim >= cap) realocaFila(&fila, &cap);
             fila[fim++] = atual->fe;
             nodos_prox_nivel++;
         }
+        
         if (atual->fd != NULL) {
-            if (fim >= cap)  realocaFila(fila, &cap); 
+            if (fim >= cap) realocaFila(&fila, &cap);
             fila[fim++] = atual->fd;
             nodos_prox_nivel++;
         }
-
-        // Se acabou o nível atual, quebra linha e prepara o próximo
+        
         if (nodos_nivel_atual == 0 && inicio < fim) {
             nivel++;
             printf("\n[%d]\t", nivel);
             nodos_nivel_atual = nodos_prox_nivel;
-            nodos_prox_nivel  = 0;
+            nodos_prox_nivel = 0;
         }
     }
     
@@ -81,94 +95,335 @@ void imprimirEmLargura(struct nodo* raiz){
     free(fila);
 }
 
-
-// Troca dois valores de um vetor
-void trocar(void **vet, size_t i, size_t i2)
-{
-
-	void *aux = vet[i];
-	vet[i] = vet[i2];
-	vet[i2] = aux;
-
-	return;
-}
-
-// Particiona os elementos de um vetor 
-size_t particionar(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, size_t dir)
-{
-
-	float *pivo = vetNodos[esq];
-	size_t m = esq;
-
-	for (size_t i = esq; i < dir; i++) {
-		// Elementos menores ou iguais ao pivo ficam a esquerda do vetor
-		if (*vetNodos[i] <= pivo[coord]) {
-			trocar((void **)*vetNodos, i, m);
-			trocar((void **)vetClasses, i, m);
-			m++;
-		}
-	}
-
-    // Pivo assume posição correta
-	trocar((void **)*vetNodos, m, dir);
-	trocar((void **)vetClasses, m, dir);
-
-	return m;
+void imprimeZVizinhos(struct nodo **vizinhos, float *distancias, 
+                      int nodosEncontrados, int k) {
+    printf("Vizinhos mais próximos:\n");
+    
+    for (int i = 0; i < nodosEncontrados; i++) {
+        // Imprime as coordenadas
+        for (int j = 0; j < k; j++) {
+            printf("%.1f", vizinhos[i]->chaves[j]);
+            if (j < k - 1) {
+                printf(", ");
+            }
+        }
+        
+        // Imprime a classe (supondo que existe um campo 'classe' no struct nodo)
+        printf(" (classe %ld),", vizinhos[i]->classe);
+        
+        // Imprime a distância
+        printf(" dist = %.4f\n", distancias[i]);
+    }
 }
 
 
-void ordenarQS(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, size_t dir){
+// ========== FUNÇÕES AUXILIARES ==========
+
+// Troca dois ponteiros em um vetor de ponteiros
+void trocarPonteiros(float **vet, size_t i, size_t j) {
+    float *aux = vet[i];
+    vet[i] = vet[j];
+    vet[j] = aux;
+}
+
+// Troca dois valores em um vetor de size_t
+void trocarClasses(size_t *vet, size_t i, size_t j) {
+    size_t aux = vet[i];
+    vet[i] = vet[j];
+    vet[j] = aux;
+}
+
+// ========== PARTICIONAMENTO QUICKSORT ==========
+
+size_t particionar(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, size_t dir) {
+    // Escolhe o último elemento como pivô
+    float pivoValor = vetNodos[dir][coord];  
+    size_t m = esq;
+    
+    for (size_t i = esq; i < dir; i++) {
+        // Elementos menores ou iguais ao pivô ficam à esquerda
+        if (vetNodos[i][coord] <= pivoValor) {  
+            trocarPonteiros(vetNodos, i, m);
+            trocarClasses(vetClasses, i, m);
+            m++;
+        }
+    }
+    
+    // Pivô assume posição correta
+    trocarPonteiros(vetNodos, m, dir);
+    trocarClasses(vetClasses, m, dir);
+    
+    return m;
+}
+
+// ========== QUICKSORT ==========
+
+void ordenarQS(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, size_t dir) {
     if (esq >= dir)
-		return;
-
-	size_t pivo = particionar(vetNodos, vetClasses, coord, esq, dir);
-    // Lado esquerdo do vetor
-	ordenarQS(vetNodos, vetClasses, coord, esq, pivo-1);
-    // Lado direito do vetor
-	ordenarQS(vetNodos, vetClasses, coord, pivo+1, dir);
-
-	return;
-
+        return;
+    
+    size_t pivo = particionar(vetNodos, vetClasses, coord, esq, dir);
+    
+    // Lado esquerdo (cuidado com underflow!)
+    if (pivo > 0 && esq < pivo) {  
+        ordenarQS(vetNodos, vetClasses, coord, esq, pivo - 1);
+    }
+    
+    // Lado direito
+    if (pivo < dir) {  
+        ordenarQS(vetNodos, vetClasses, coord, pivo + 1, dir);
+    }
 }
 
-/* – Criar k-d Tree: carrega a k-d Tree da entrada padrão. Primeiro é solicitado o número N de
-pontos, depois, o número de dimensões K. Finalmente, são dados todos os N pontos. Cada
-ponto é seguido de um número inteiro, indicando sua classe. Juntamente com o trabalho, é
-dado um exemplo de arquivo contendo uma entrada válida para a k-d Tree, que pode ser
-lida da entrada padrão para criar uma árvore. A árvore não precisa ser balanceada. */
+// ========== CONSTRUÇÃO DA KD-TREE CORRIGIDA ==========
 
-struct nodo *construir(float **vetNodos, size_t *vetClasses, size_t coord, size_t k, size_t esq, size_t dir){
-    size_t meio = floor((esq+dir)/2);
+struct nodo *construir(float **vetNodos, size_t *vetClasses, size_t coord, 
+                       size_t k, size_t esq, size_t dir) {
+    
+    // Caso base: intervalo inválido
+    if (esq > dir) {
+        return NULL;
+    }
+    
+    // Ordena pela coordenada atual
     ordenarQS(vetNodos, vetClasses, coord, esq, dir);
-
-    struct nodo *novo;
+    
+    // Encontra o elemento do meio
+    size_t meio = esq + (dir - esq) / 2; 
+    
+    // Cria novo nodo
+    struct nodo *novo = malloc(sizeof(struct nodo)); 
+    if (!novo) {
+        fprintf(stderr, "Erro ao alocar memória para nodo\n");
+        exit(1);
+    }
+    
+    // Inicializa o nodo
     novo->chaves = vetNodos[meio];
     novo->classe = vetClasses[meio];
+    novo->numDims = k;
     novo->fe = NULL;
     novo->fd = NULL;
-    novo->numDims = k;
-
-    if (esq <= meio)
-        novo->fe = construir(vetNodos, vetClasses, (coord+1) % k, k, esq, meio-1);
-    if (meio + 1 <= dir)
-        novo->fd = construir(vetNodos, vetClasses, (coord+1) % k, k, meio+1, dir);
-
+    
+    // Constrói subárvore esquerda
+    if (meio > 0 && esq <= meio - 1) { 
+        novo->fe = construir(vetNodos, vetClasses, (coord + 1) % k, k, esq, meio - 1);
+    }
+    
+    // Constrói subárvore direita
+    if (meio < dir) { 
+        novo->fd = construir(vetNodos, vetClasses, (coord + 1) % k, k, meio + 1, dir);
+    }
+    
     return novo;
+}
+
+// ========== DESTRUIÇÃO DA ÁRVORE ==========
+
+void destruirPosOrdem(struct nodo *raiz) {
+    if (raiz != NULL) {
+        destruirPosOrdem(raiz->fe);
+        destruirPosOrdem(raiz->fd);
+        // Nota: NÃO libera raiz->chaves aqui, pois aponta para vetNodos original
+        free(raiz);
+    }
 }
 
 /* – Buscar: recebe um vetor de coordenadas, e retorna um ponteiro para o nodo que contém
 essas coordenadas, ou NULL caso não exista. */
-struct nodo* buscar(struct nodo *nodo, float *lerPonto, size_t coord, size_t k){
-    if (!nodo || nodo->chaves == lerPonto)
+/* – Buscar: recebe um vetor de coordenadas, e retorna um ponteiro para o nodo que contém
+   essas coordenadas, ou NULL caso não exista. */
+struct nodo* buscar(struct nodo *nodo, float *lerPonto, size_t coord, size_t k) {
+    // Caso base: nodo NULL
+    if (!nodo) 
+        return NULL;
+    
+    // ✅ Verifica se TODAS as coordenadas são iguais
+    int iguais = 1;  // Assume que são iguais
+    for (size_t i = 0; i < k; i++) {
+        // Compara com tolerância para floats (importante!)
+        if (fabs(nodo->chaves[i] - lerPonto[i]) > 0.0001) {
+            iguais = 0;
+            break;
+        }
+    }
+    
+    // Se encontrou o ponto exato, retorna
+    if (iguais) 
         return nodo;
-        
+    
+    // Continua a busca recursiva baseado na coordenada atual
     if (lerPonto[coord] < nodo->chaves[coord])
         return buscar(nodo->fe, lerPonto, (coord+1)%k, k);
-    return buscar(nodo->fd, lerPonto, (coord+1)%k, k);
+    else
+        return buscar(nodo->fd, lerPonto, (coord+1)%k, k);
 }
 
 /* – z-vizinhos: recebe um vetor de coordenadas, e retorna um vetor de ponteiros de tamanho
 z (z é um parâmetro), contendo os ponteiros para os z-vizinhos mais próximos do vetor. */
-struct nodo** z_vizinhos(){
+float distCart(struct nodo p1, float *p2, int k){
+    float res, soma = 0.0;
 
+    for (size_t i=0; i<k; i++){
+        soma += p1.chaves[i] - p2[i];
+        soma *= soma;
+        res += soma;
+    }
+
+    return sqrt(res);
+}
+
+// Inicializa a lista de k vizinhos
+struct ListaZNN* criaListaZNN(int k, int numVizinhos) {
+
+    struct ListaZNN *lista = malloc(sizeof(struct ListaZNN));
+    if (!lista) matarProgramaFaltaMemoria();
+    
+    lista->vizinhos = malloc(numVizinhos * sizeof(struct nodo*));
+    lista->distancias = malloc(numVizinhos * sizeof(float));
+    if (!lista->vizinhos || !lista->distancias) matarProgramaFaltaMemoria();
+
+    lista->tamanho = 0;
+    lista->capMax = numVizinhos;
+    
+    // Inicializa com distâncias infinitas
+    for (int i = 0; i < numVizinhos; i++) {
+        lista->vizinhos[i] = NULL;
+        lista->distancias[i] = FLT_MAX;
+    }
+    
+    return lista;
+}
+
+// Libera a memória da lista
+void liberaListaZNN(struct ListaZNN *lista) {
+    free(lista->vizinhos);
+    free(lista->distancias);
+    free(lista);
+}
+
+// Retorna a maior distância atual (distância do k-ésimo vizinho)
+// Usado para poda da busca
+float maiorDistanciaZNN(struct ListaZNN *lista) {
+    if (lista->tamanho < lista->capMax) {
+        return FLT_MAX;  // Ainda não temos k vizinhos
+    }
+    return lista->distancias[lista->tamanho - 1];
+}
+
+// Insere um vizinho mantendo a lista ordenada por distância
+// Mantém apenas os k melhores
+void insereVizinhoZNN(struct ListaZNN *lista, struct nodo *candidato, float dist) {
+    // Se a lista está cheia E a nova distância não é melhor, descarta
+    if (lista->tamanho >= lista->capMax && dist >= lista->distancias[lista->capMax - 1]) {
+        return;
+    }
+    
+    // Determina posição de inserção
+    int pos = lista->tamanho;
+    
+    // Se a lista está cheia, vai substituir o último
+    if (lista->tamanho >= lista->capMax) {
+        pos = lista->capMax - 1;
+    } else {
+        lista->tamanho++;
+    }
+    
+    // "Insertion sort": desloca elementos maiores para direita
+    while (pos > 0 && dist < lista->distancias[pos - 1]) {
+        lista->distancias[pos] = lista->distancias[pos - 1];
+        lista->vizinhos[pos] = lista->vizinhos[pos - 1];
+        pos--;
+    }
+    
+    // Insere na posição correta
+    lista->distancias[pos] = dist;
+    lista->vizinhos[pos] = candidato;
+}
+
+// ========== ALGORITMO KNN NA KD-TREE ==========
+
+/**
+ * Busca os k vizinhos mais próximos em uma KD-Tree
+ * 
+ * Baseado no algoritmo KNN descrito pela IBM:
+ * - Calcula distâncias usando métrica escolhida (Euclidiana por padrão)
+ * - Mantém apenas os k vizinhos mais próximos
+ * - Usa poda para evitar explorar ramos desnecessários
+ **/
+
+void buscaZNN(struct nodo *r, float *ponto, struct ListaZNN *lista, int dim, int coord) {
+    if (!r) return;
+    
+    // Calcula distância do nodo atual ao ponto de consulta
+    float dist = distCart(*r, ponto, dim);
+    
+    // Tenta inserir o nodo atual na lista dos k melhores
+    insereVizinhoZNN(lista, r, dist);
+    
+    // Se é folha, não há mais nada a explorar
+    if (!r->fe && !r->fd) {
+        return;
+    }
+    
+    // ===== ESTRATÉGIA DE BUSCA =====
+    // 1. Escolhe qual subárvore explorar primeiro baseado na coordenada atual
+    // 2. Explora a subárvore "mais próxima" primeiro
+    // 3. Usa PODA: só explora a outra subárvore se ela pode conter vizinhos melhores
+    
+    struct nodo *prim, *sec;
+    float diff = ponto[coord] - r->chaves[coord];
+    
+    if (diff < 0) {
+        prim = r->fe;  // Ponto está à esquerda do hiperplano
+        sec = r->fd;
+    } else {
+        prim = r->fd;  // Ponto está à direita do hiperplano
+        sec = r->fe;
+    }
+    
+    // Explora a subárvore mais próxima primeiro
+    int proxCoord = (coord + 1) % dim;
+    if (prim) {
+        buscaZNN(prim, ponto, lista, dim, proxCoord);
+    }
+    
+    // ===== PODA (Backtracking) =====
+    // Só explora a outra subárvore se:
+    // 1. Ela existe, E
+    // 2. A distância ao hiperplano é menor que a distância do k-ésimo vizinho
+    // 
+    // Isso evita explorar ramos que não podem conter vizinhos melhores
+    if (sec) {
+        float distHiperplano = fabs(diff);
+        float piorDistancia = maiorDistanciaZNN(lista);
+        
+        if (distHiperplano < piorDistancia) {
+            buscaZNN(sec, ponto, lista, dim, proxCoord);
+        }
+    }
+}
+
+/**
+ * Encontra os k vizinhos mais próximos de um ponto
+ * Retorna os vizinhos em um array ordenado por distância
+ */
+void  z_vizinhos(struct nodo *raiz, float *ponto, int k, int numVizinhos,
+                       struct nodo **resultado, float *distancias, int *numEncontrados) {
+
+    // Cria lista temporária para a busca
+    struct ListaZNN *lista = criaListaZNN(k, numVizinhos);
+    
+    // Executa a busca KNN
+    buscaZNN(raiz, ponto, lista, k, 0);
+    
+    *numEncontrados = lista->tamanho;
+    // Copia resultados para os arrays de saída
+    for (int i = 0; i < lista->tamanho; i++) {
+        resultado[i] = lista->vizinhos[i];
+        distancias[i] = lista->distancias[i];
+    }
+    
+    // Libera memória temporária
+    liberaListaZNN(lista);
 }
