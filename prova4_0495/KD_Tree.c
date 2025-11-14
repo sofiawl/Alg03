@@ -14,8 +14,6 @@ void falhaScanf(){
     exit(1);
 }
 
-// ========== VERSÃO ALTERNATIVA: COM CLASSE ==========
-
 /**
  * Imprime nodo com classe
  */
@@ -133,7 +131,7 @@ void trocarClasses(size_t *vet, size_t i, size_t j) {
     vet[j] = aux;
 }
 
-// ========== PARTICIONAMENTO QUICKSORT ==========
+// ========== QUICKSORT ==========
 
 size_t particionar(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, size_t dir) {
     // Escolhe o último elemento como pivô
@@ -156,8 +154,6 @@ size_t particionar(float **vetNodos, size_t *vetClasses, size_t coord, size_t es
     return m;
 }
 
-// ========== QUICKSORT ==========
-
 void ordenarQS(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, size_t dir) {
     if (esq >= dir)
         return;
@@ -175,7 +171,7 @@ void ordenarQS(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, s
     }
 }
 
-// ========== CONSTRUÇÃO DA KD-TREE CORRIGIDA ==========
+// ========== CONSTRUÇÃO DA KD-TREE ==========
 
 struct nodo *construir(float **vetNodos, size_t *vetClasses, size_t coord, 
                        size_t k, size_t esq, size_t dir) {
@@ -218,8 +214,6 @@ struct nodo *construir(float **vetNodos, size_t *vetClasses, size_t coord,
     return novo;
 }
 
-// ========== DESTRUIÇÃO DA ÁRVORE ==========
-
 void destruirPosOrdem(struct nodo *raiz) {
     if (raiz != NULL) {
         destruirPosOrdem(raiz->fe);
@@ -228,6 +222,9 @@ void destruirPosOrdem(struct nodo *raiz) {
         free(raiz);
     }
 }
+
+
+// ========== BUSCAR DA KD-TREE ==========
 
 /* – Buscar: recebe um vetor de coordenadas, e retorna um ponteiro para o nodo que contém
 essas coordenadas, ou NULL caso não exista. */
@@ -238,7 +235,6 @@ struct nodo* buscar(struct nodo *nodo, float *lerPonto, size_t coord, size_t k) 
     if (!nodo) 
         return NULL;
     
-    // ✅ Verifica se TODAS as coordenadas são iguais
     int iguais = 1;  // Assume que são iguais
     for (size_t i = 0; i < k; i++) {
         // Compara com tolerância para floats (importante!)
@@ -259,10 +255,15 @@ struct nodo* buscar(struct nodo *nodo, float *lerPonto, size_t coord, size_t k) 
         return buscar(nodo->fd, lerPonto, (coord+1)%k, k);
 }
 
+
+// ========== ALGORITMO KNN NA KD-TREE ==========
+
+
 /* – z-vizinhos: recebe um vetor de coordenadas, e retorna um vetor de ponteiros de tamanho
 z (z é um parâmetro), contendo os ponteiros para os z-vizinhos mais próximos do vetor. */
 float distCart(struct nodo p1, float *p2, int k){
-    float res, soma = 0.0;
+    float res = 0.0;
+    float soma = 0.0;
 
     for (size_t i=0; i<k; i++){
         soma += p1.chaves[i] - p2[i];
@@ -341,22 +342,13 @@ void insereVizinhoZNN(struct ListaZNN *lista, struct nodo *candidato, float dist
     lista->vizinhos[pos] = candidato;
 }
 
-// ========== ALGORITMO KNN NA KD-TREE ==========
 
-/**
- * Busca os k vizinhos mais próximos em uma KD-Tree
- * 
- * Baseado no algoritmo KNN descrito pela IBM:
- * - Calcula distâncias usando métrica escolhida (Euclidiana por padrão)
- * - Mantém apenas os k vizinhos mais próximos
- * - Usa poda para evitar explorar ramos desnecessários
- **/
-
-void buscaZNN(struct nodo *r, float *ponto, struct ListaZNN *lista, int dim, int coord) {
+void buscaZNN(struct nodo *r, float *ponto, struct ListaZNN *lista, int k, int coord) {
     if (!r) return;
     
     // Calcula distância do nodo atual ao ponto de consulta
-    float dist = distCart(*r, ponto, dim);
+    
+    float dist = distCart(*r, ponto, k);
     
     // Tenta inserir o nodo atual na lista dos k melhores
     insereVizinhoZNN(lista, r, dist);
@@ -366,7 +358,6 @@ void buscaZNN(struct nodo *r, float *ponto, struct ListaZNN *lista, int dim, int
         return;
     }
     
-    // ===== ESTRATÉGIA DE BUSCA =====
     // 1. Escolhe qual subárvore explorar primeiro baseado na coordenada atual
     // 2. Explora a subárvore "mais próxima" primeiro
     // 3. Usa PODA: só explora a outra subárvore se ela pode conter vizinhos melhores
@@ -383,9 +374,9 @@ void buscaZNN(struct nodo *r, float *ponto, struct ListaZNN *lista, int dim, int
     }
     
     // Explora a subárvore mais próxima primeiro
-    int proxCoord = (coord + 1) % dim;
+    int proxCoord = (coord + 1) % k;
     if (prim) {
-        buscaZNN(prim, ponto, lista, dim, proxCoord);
+        buscaZNN(prim, ponto, lista, k, proxCoord);
     }
     
     // ===== PODA (Backtracking) =====
@@ -399,11 +390,26 @@ void buscaZNN(struct nodo *r, float *ponto, struct ListaZNN *lista, int dim, int
         float piorDistancia = maiorDistanciaZNN(lista);
         
         if (distHiperplano < piorDistancia) {
-            buscaZNN(sec, ponto, lista, dim, proxCoord);
+            buscaZNN(sec, ponto, lista, k, proxCoord);
         }
     }
 }
 
+void imprimirLista(struct ListaZNN *lista){
+    printf("VIZINHOS\n");
+    for (int i=0; i<lista->tamanho; i++){
+        imprimirNodo(lista->vizinhos[i]);
+    }
+    printf("\n");
+
+    printf("DISTANCIAS\n");
+    for (int i=0; i<lista->tamanho; i++)
+        printf("%f, ", lista->distancias[i]);
+
+    printf("\n");
+    printf("tamanho: %d\n", lista->tamanho);
+    printf("capacidade: %d\n", lista->capMax);
+}
 /**
  * Encontra os k vizinhos mais próximos de um ponto
  * Retorna os vizinhos em um array ordenado por distância
@@ -413,7 +419,7 @@ void  z_vizinhos(struct nodo *raiz, float *ponto, int k, int numVizinhos,
 
     // Cria lista temporária para a busca
     struct ListaZNN *lista = criaListaZNN(k, numVizinhos);
-    
+
     // Executa a busca KNN
     buscaZNN(raiz, ponto, lista, k, 0);
     
