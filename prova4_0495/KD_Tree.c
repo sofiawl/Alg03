@@ -2,99 +2,38 @@
 #include <stdio.h>
 #include <math.h>
 #include <float.h>
+#include <stdint.h>  
 #include "KD_Tree.h"
 
-void matarProgramaFaltaMemoria(){
+// ========== FUNÇÕES DE ERRO ==========
+
+void matar_programa_falta_memoria() {
     fprintf(stderr, "Falha ao alocar memória.\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
-void falhaScanf(){
+void falha_scanf() {
     fprintf(stderr, "Falha ao ler.\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
-/**
- * Imprime nodo com classe
- */
-void imprimirNodo(struct nodo *nodo) {
+// ========== IMPRESSÃO ==========
+
+void imprimir_nodo(const struct kd_nodo *nodo) {
     if (!nodo) {
         printf("NULL ");
         return;
     }
     
     printf("(");
-    for (size_t i = 0; i < nodo->numDims; i++) {
+    for (uint8_t i = 0; i < nodo->numDims; i++) {  
         printf("%.1f", nodo->chaves[i]);
-        if (i < nodo->numDims - 1) {
-            printf(", ");
-        }
+        if (i < nodo->numDims - 1) printf(", ");
     }
-    printf(", c%ld) ", nodo->classe);
+    printf(", c%u) ", nodo->classe);
 }
 
-
-void realocaFila(struct nodo ***fila, int *cap) {
-    *cap *= 2;
-    *fila = realloc(*fila, (*cap) * sizeof(struct nodo*));
-    if (!*fila) {
-        fprintf(stderr, "Erro ao realocar fila\n");
-        exit(1);
-    }
-}
-
-void imprimirEmLargura(struct nodo* raiz) {
-    if (!raiz) {
-        printf("Árvore vazia\n");
-        return;
-    }
-    
-    int cap = 128;
-    struct nodo **fila = malloc(cap * sizeof(struct nodo*));
-    if (!fila) {
-        fprintf(stderr, "Erro ao alocar fila\n");
-        exit(1);
-    }
-    
-    int inicio = 0, fim = 0;
-    int nivel = 0;
-    int nodos_nivel_atual = 1, nodos_prox_nivel = 0;
-    
-    fila[fim++] = raiz;
-    printf("[%d]\t", nivel);
-    
-    while (inicio < fim) {
-        struct nodo* atual = fila[inicio++];
-        nodos_nivel_atual--;
-        
-        imprimirNodo(atual);
-        
-        if (atual->fe != NULL) {
-            if (fim >= cap) realocaFila(&fila, &cap);
-            fila[fim++] = atual->fe;
-            nodos_prox_nivel++;
-        }
-        
-        if (atual->fd != NULL) {
-            if (fim >= cap) realocaFila(&fila, &cap);
-            fila[fim++] = atual->fd;
-            nodos_prox_nivel++;
-        }
-        
-        if (nodos_nivel_atual == 0 && inicio < fim) {
-            nivel++;
-            printf("\n[%d]\t", nivel);
-            nodos_nivel_atual = nodos_prox_nivel;
-            nodos_prox_nivel = 0;
-        }
-    }
-    
-    printf("\n");
-    free(fila);
-}
-
-void imprimeZVizinhos(struct nodo **vizinhos, float *distancias, 
-                      int nodosEncontrados, int k) {
+void imprimir_z_vizinhos(struct kd_nodo **vizinhos, float *distancias, uint8_t nodosEncontrados, size_t k) {
     printf("Vizinhos mais próximos:\n");
     
     for (int i = 0; i < nodosEncontrados; i++) {
@@ -107,7 +46,7 @@ void imprimeZVizinhos(struct nodo **vizinhos, float *distancias,
         }
         
         // Imprime a classe (supondo que existe um campo 'classe' no struct nodo)
-        printf(" (classe %ld),", vizinhos[i]->classe);
+        printf(" (classe %d),", vizinhos[i]->classe);
         
         // Imprime a distância
         printf(" dist = %.4f\n", distancias[i]);
@@ -115,180 +54,202 @@ void imprimeZVizinhos(struct nodo **vizinhos, float *distancias,
 }
 
 
-// ========== FUNÇÕES AUXILIARES ==========
+void imprimir_em_largura(struct kd_nodo* raiz) {
+    if (!raiz) {
+        printf("Árvore vazia\n");
+        return;
+    }
+    
+    size_t cap = 128;
+    struct kd_nodo **fila = malloc(cap * sizeof(struct kd_nodo*));
+    if (!fila) matar_programa_falta_memoria();
+    
+    size_t inicio = 0, fim = 0;
+    size_t nivel = 0;
+    size_t nodos_nivel_atual = 1, nodos_prox_nivel = 0;
+    size_t nodos_impressos_linha = 0;
+    const size_t MAX_NODOS_LINHA = 7;
+    
+    fila[fim++] = raiz;
+    printf("[%zu]\t", nivel);  // %zu para size_t
+    
+    while (inicio < fim) {
+        struct kd_nodo* atual = fila[inicio++];
+        nodos_nivel_atual--;
+        
+        imprimir_nodo(atual);
+        nodos_impressos_linha++;
+        
+        if (nodos_impressos_linha >= MAX_NODOS_LINHA && nodos_nivel_atual > 0) {
+            printf("\n\t");
+            nodos_impressos_linha = 0;
+        }
+        
+        if (atual->fe) {
+            if (fim >= cap) {
+                cap *= 2;
+                fila = realloc(fila, cap * sizeof(struct kd_nodo*));
+                if (!fila) matar_programa_falta_memoria();
+            }
+            fila[fim++] = atual->fe;
+            nodos_prox_nivel++;
+        }
+        
+        if (atual->fd) {
+            if (fim >= cap) {
+                cap *= 2;
+                fila = realloc(fila, cap * sizeof(struct kd_nodo*));
+                if (!fila) matar_programa_falta_memoria();
+            }
+            fila[fim++] = atual->fd;
+            nodos_prox_nivel++;
+        }
+        
+        if (nodos_nivel_atual == 0 && inicio < fim) {
+            nivel++;
+            printf("\n[%zu]\t", nivel);
+            nodos_nivel_atual = nodos_prox_nivel;
+            nodos_prox_nivel = 0;
+            nodos_impressos_linha = 0;
+        }
+    }
+    
+    printf("\n");
+    free(fila);
+}
 
-// Troca dois ponteiros em um vetor de ponteiros
-void trocarPonteiros(float **vet, size_t i, size_t j) {
+
+// ========== CONSTRUÇÃO DA KD-TREE ==========
+
+static inline void trocar_ponteiros(float **vet, size_t i, size_t j) {
     float *aux = vet[i];
     vet[i] = vet[j];
     vet[j] = aux;
 }
 
-// Troca dois valores em um vetor de size_t
-void trocarClasses(size_t *vet, size_t i, size_t j) {
-    size_t aux = vet[i];
+static inline void trocar_classes(uint32_t *vet, size_t i, size_t j) {
+    uint32_t aux = vet[i];
     vet[i] = vet[j];
     vet[j] = aux;
 }
 
-// ========== QUICKSORT ==========
-
-size_t particionar(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, size_t dir) {
-    // Escolhe o último elemento como pivô
-    float pivoValor = vetNodos[dir][coord];  
+static size_t particionar(float **vetNodos, uint32_t *vetClasses, 
+                          uint8_t coord, size_t esq, size_t dir) {
+    const float pivoValor = vetNodos[dir][coord];  
     size_t m = esq;
     
     for (size_t i = esq; i < dir; i++) {
-        // Elementos menores ou iguais ao pivô ficam à esquerda
-        if (vetNodos[i][coord] <= pivoValor) {  
-            trocarPonteiros(vetNodos, i, m);
-            trocarClasses(vetClasses, i, m);
+        if (vetNodos[i][coord] <= pivoValor) {
+            trocar_ponteiros(vetNodos, i, m);
+            trocar_classes(vetClasses, i, m);
             m++;
         }
     }
     
-    // Pivô assume posição correta
-    trocarPonteiros(vetNodos, m, dir);
-    trocarClasses(vetClasses, m, dir);
-    
+    trocar_ponteiros(vetNodos, m, dir);
+    trocar_classes(vetClasses, m, dir);
     return m;
 }
 
-void ordenarQS(float **vetNodos, size_t *vetClasses, size_t coord, size_t esq, size_t dir) {
-    if (esq >= dir)
-        return;
+void ordenar_quicksort(float **vetNodos, uint32_t *vetClasses, 
+               uint8_t coord, size_t esq, size_t dir) {
+    if (esq >= dir) return;
     
     size_t pivo = particionar(vetNodos, vetClasses, coord, esq, dir);
     
-    // Lado esquerdo (cuidado com underflow!)
-    if (pivo > 0 && esq < pivo) {  
-        ordenarQS(vetNodos, vetClasses, coord, esq, pivo - 1);
+    if (pivo > 0 && esq < pivo) {
+        ordenar_quicksort(vetNodos, vetClasses, coord, esq, pivo - 1);
     }
-    
-    // Lado direito
-    if (pivo < dir) {  
-        ordenarQS(vetNodos, vetClasses, coord, pivo + 1, dir);
+    if (pivo < dir) {
+        ordenar_quicksort(vetNodos, vetClasses, coord, pivo + 1, dir);
     }
 }
 
-// ========== CONSTRUÇÃO DA KD-TREE ==========
-
-struct nodo *construir(float **vetNodos, size_t *vetClasses, size_t coord, 
-                       size_t k, size_t esq, size_t dir) {
+struct kd_nodo *construir_kdtree(float **vetNodos, uint32_t *vetClasses, 
+                       uint8_t coord, uint8_t k, size_t esq, size_t dir) {
+    if (esq > dir) return NULL;
     
-    // Caso base: intervalo inválido
-    if (esq > dir) {
-        return NULL;
-    }
+    ordenar_quicksort(vetNodos, vetClasses, coord, esq, dir);
     
-    // Ordena pela coordenada atual
-    ordenarQS(vetNodos, vetClasses, coord, esq, dir);
+    const size_t meio = esq + (dir - esq) / 2;  // Evita overflow
     
-    // Encontra o elemento do meio
-    size_t meio = esq + (dir - esq) / 2; 
+    struct kd_nodo *novo = malloc(sizeof(struct kd_nodo));
+    if (!novo) matar_programa_falta_memoria();
     
-    // Cria novo nodo
-    struct nodo *novo = malloc(sizeof(struct nodo)); 
-    if (!novo) {
-        fprintf(stderr, "Erro ao alocar memória para nodo\n");
-        exit(1);
-    }
-    
-    // Inicializa o nodo
     novo->chaves = vetNodos[meio];
     novo->classe = vetClasses[meio];
     novo->numDims = k;
     novo->fe = NULL;
     novo->fd = NULL;
     
-    // Constrói subárvore esquerda
-    if (meio > 0 && esq <= meio - 1) { 
-        novo->fe = construir(vetNodos, vetClasses, (coord + 1) % k, k, esq, meio - 1);
-    }
+    const uint8_t proxCoord = (coord + 1 >= k) ? 0 : coord + 1;
     
-    // Constrói subárvore direita
-    if (meio < dir) { 
-        novo->fd = construir(vetNodos, vetClasses, (coord + 1) % k, k, meio + 1, dir);
+    if (meio > 0 && esq <= meio - 1) {
+        novo->fe = construir_kdtree(vetNodos, vetClasses, proxCoord, k, esq, meio - 1);
+    }
+    if (meio < dir) {
+        novo->fd = construir_kdtree(vetNodos, vetClasses, proxCoord, k, meio + 1, dir);
     }
     
     return novo;
 }
 
-void destruirPosOrdem(struct nodo *raiz) {
-    if (raiz != NULL) {
-        destruirPosOrdem(raiz->fe);
-        destruirPosOrdem(raiz->fd);
-        // Nota: NÃO libera raiz->chaves aqui, pois aponta para vetNodos original
-        free(raiz);
-    }
+void destruir_pos_ordem(struct kd_nodo *raiz) {
+    if (!raiz) return;
+    destruir_pos_ordem(raiz->fe);
+    destruir_pos_ordem(raiz->fd);
+    free(raiz);  
 }
 
+// ========== BUSCA ==========
 
-// ========== BUSCAR DA KD-TREE ==========
-
-/* – Buscar: recebe um vetor de coordenadas, e retorna um ponteiro para o nodo que contém
-essas coordenadas, ou NULL caso não exista. */
-/* – Buscar: recebe um vetor de coordenadas, e retorna um ponteiro para o nodo que contém
-   essas coordenadas, ou NULL caso não exista. */
-struct nodo* buscar(struct nodo *nodo, float *lerPonto, size_t coord, size_t k) {
-    // Caso base: nodo NULL
-    if (!nodo) 
-        return NULL;
+struct kd_nodo* buscar_kdnodo(struct kd_nodo *nodo, const float *lerPonto, 
+                    uint8_t coord, uint8_t k) {
+    if (!nodo) return NULL;
     
-    int iguais = 1;  // Assume que são iguais
-    for (size_t i = 0; i < k; i++) {
-        // Compara com tolerância para floats (importante!)
-        if (fabs(nodo->chaves[i] - lerPonto[i]) > 0.0001) {
+    // Compara todas dimensões de uma vez
+    uint8_t iguais = 1;
+    for (uint8_t i = 0; i < k; i++) {
+        if (fabsf(nodo->chaves[i] - lerPonto[i]) > 1e-6f) {  // fabsf para float
             iguais = 0;
             break;
         }
     }
     
-    // Se encontrou o ponto exato, retorna
-    if (iguais) 
-        return nodo;
+    if (iguais) return nodo;
     
-    // Continua a busca recursiva baseado na coordenada atual
-    if (lerPonto[coord] < nodo->chaves[coord])
-        return buscar(nodo->fe, lerPonto, (coord+1)%k, k);
-    else
-        return buscar(nodo->fd, lerPonto, (coord+1)%k, k);
+    const uint8_t proxCoord = (coord + 1 >= k) ? 0 : coord + 1;
+    
+    return (lerPonto[coord] < nodo->chaves[coord]) 
+        ? buscar_kdnodo(nodo->fe, lerPonto, proxCoord, k)
+        : buscar_kdnodo(nodo->fd, lerPonto, proxCoord, k);
 }
 
+// ========== K-VIZINHOS MAIS PRÓXIMOS (KNN) ==========
 
-// ========== ALGORITMO KNN NA KD-TREE ==========
-
-
-/* – z-vizinhos: recebe um vetor de coordenadas, e retorna um vetor de ponteiros de tamanho
-z (z é um parâmetro), contendo os ponteiros para os z-vizinhos mais próximos do vetor. */
-float distCart(struct nodo p1, float *p2, int k){
-    float res = 0.0;
-    float soma = 0.0;
-
-    for (size_t i=0; i<k; i++){
-        soma += p1.chaves[i] - p2[i];
-        soma *= soma;
-        res += soma;
+static inline float dist_euclidiana(const struct kd_nodo *p1, const float *p2, uint8_t k) {
+    float soma = 0.0f; 
+    
+    for (uint8_t i = 0; i < k; i++) {
+        const float diff = p1->chaves[i] - p2[i];
+        soma += diff * diff; 
     }
-
-    return sqrt(res);
+    
+    return sqrtf(soma);  
 }
 
-// Inicializa a lista de k vizinhos
-struct ListaZNN* criaListaZNN(int k, int numVizinhos) {
-
-    struct ListaZNN *lista = malloc(sizeof(struct ListaZNN));
-    if (!lista) matarProgramaFaltaMemoria();
+struct kd_lista* criar_kdlista(uint8_t k, size_t numVizinhos) {
+    struct kd_lista *lista = malloc(sizeof(struct kd_lista));
+    if (!lista) matar_programa_falta_memoria();
     
-    lista->vizinhos = malloc(numVizinhos * sizeof(struct nodo*));
+    lista->vizinhos = malloc(numVizinhos * sizeof(struct kd_nodo*));
     lista->distancias = malloc(numVizinhos * sizeof(float));
-    if (!lista->vizinhos || !lista->distancias) matarProgramaFaltaMemoria();
-
+    if (!lista->vizinhos || !lista->distancias) matar_programa_falta_memoria();
+    
     lista->tamanho = 0;
     lista->capMax = numVizinhos;
     
-    // Inicializa com distâncias infinitas
-    for (int i = 0; i < numVizinhos; i++) {
+    for (size_t i = 0; i < numVizinhos; i++) {
         lista->vizinhos[i] = NULL;
         lista->distancias[i] = FLT_MAX;
     }
@@ -296,140 +257,85 @@ struct ListaZNN* criaListaZNN(int k, int numVizinhos) {
     return lista;
 }
 
-// Libera a memória da lista
-void liberaListaZNN(struct ListaZNN *lista) {
+void liberar_kdlista(struct kd_lista *lista) {
+    if (!lista) return;
     free(lista->vizinhos);
     free(lista->distancias);
     free(lista);
 }
 
-// Retorna a maior distância atual (distância do k-ésimo vizinho)
-// Usado para poda da busca
-float maiorDistanciaZNN(struct ListaZNN *lista) {
-    if (lista->tamanho < lista->capMax) {
-        return FLT_MAX;  // Ainda não temos k vizinhos
-    }
-    return lista->distancias[lista->tamanho - 1];
+static inline float maior_dist_kdlista(const struct kd_lista *lista) {
+    return (lista->tamanho < lista->capMax) 
+        ? FLT_MAX 
+        : lista->distancias[lista->tamanho - 1];
 }
 
-// Insere um vizinho mantendo a lista ordenada por distância
-// Mantém apenas os k melhores
-void insereVizinhoZNN(struct ListaZNN *lista, struct nodo *candidato, float dist) {
-    // Se a lista está cheia E a nova distância não é melhor, descarta
-    if (lista->tamanho >= lista->capMax && dist >= lista->distancias[lista->capMax - 1]) {
+static void inserir_vizinho_kdlista(struct kd_lista *lista, 
+                             struct kd_nodo *candidato, float dist) {
+
+    if (lista->tamanho >= lista->capMax && 
+        dist >= lista->distancias[lista->capMax - 1]) {
         return;
     }
     
-    // Determina posição de inserção
-    int pos = lista->tamanho;
+    size_t pos = (lista->tamanho < lista->capMax) 
+        ? lista->tamanho++ 
+        : lista->capMax - 1;
     
-    // Se a lista está cheia, vai substituir o último
-    if (lista->tamanho >= lista->capMax) {
-        pos = lista->capMax - 1;
-    } else {
-        lista->tamanho++;
-    }
-    
-    // "Insertion sort": desloca elementos maiores para direita
     while (pos > 0 && dist < lista->distancias[pos - 1]) {
         lista->distancias[pos] = lista->distancias[pos - 1];
         lista->vizinhos[pos] = lista->vizinhos[pos - 1];
         pos--;
     }
     
-    // Insere na posição correta
     lista->distancias[pos] = dist;
     lista->vizinhos[pos] = candidato;
 }
 
-
-void buscaZNN(struct nodo *r, float *ponto, struct ListaZNN *lista, int k, int coord) {
+static void buscar_kdlista(struct kd_nodo *r, const float *ponto, 
+                     struct kd_lista *lista, uint8_t k, uint8_t coord) {
     if (!r) return;
     
-    // Calcula distância do nodo atual ao ponto de consulta
+    const float dist = dist_euclidiana(r, ponto, k);
+    inserir_vizinho_kdlista(lista, r, dist);
     
-    float dist = distCart(*r, ponto, k);
+    if (!r->fe && !r->fd) return;  // Folha
     
-    // Tenta inserir o nodo atual na lista dos k melhores
-    insereVizinhoZNN(lista, r, dist);
+    const float diff = ponto[coord] - r->chaves[coord];
+    struct kd_nodo *prim = (diff < 0) ? r->fe : r->fd;
+    struct kd_nodo *sec = (diff < 0) ? r->fd : r->fe;
     
-    // Se é folha, não há mais nada a explorar
-    if (!r->fe && !r->fd) {
-        return;
-    }
+    const uint8_t proxCoord = (coord + 1 >= k) ? 0 : coord + 1;
     
-    // 1. Escolhe qual subárvore explorar primeiro baseado na coordenada atual
-    // 2. Explora a subárvore "mais próxima" primeiro
-    // 3. Usa PODA: só explora a outra subárvore se ela pode conter vizinhos melhores
-    
-    struct nodo *prim, *sec;
-    float diff = ponto[coord] - r->chaves[coord];
-    
-    if (diff < 0) {
-        prim = r->fe;  // Ponto está à esquerda do hiperplano
-        sec = r->fd;
-    } else {
-        prim = r->fd;  // Ponto está à direita do hiperplano
-        sec = r->fe;
-    }
-    
-    // Explora a subárvore mais próxima primeiro
-    int proxCoord = (coord + 1) % k;
+    // Explora lado mais próximo primeiro
     if (prim) {
-        buscaZNN(prim, ponto, lista, k, proxCoord);
+        buscar_kdlista(prim, ponto, lista, k, proxCoord);
     }
     
-    // ===== PODA (Backtracking) =====
-    // Só explora a outra subárvore se:
-    // 1. Ela existe, E
-    // 2. A distância ao hiperplano é menor que a distância do k-ésimo vizinho
-    // 
-    // Isso evita explorar ramos que não podem conter vizinhos melhores
+    // PODA: só explora outro lado se necessário
     if (sec) {
-        float distHiperplano = fabs(diff);
-        float piorDistancia = maiorDistanciaZNN(lista);
-        
-        if (distHiperplano < piorDistancia) {
-            buscaZNN(sec, ponto, lista, k, proxCoord);
+        const float distHiperplano = fabsf(diff);
+        if (distHiperplano < maior_dist_kdlista(lista)) {
+            buscar_kdlista(sec, ponto, lista, k, proxCoord);
         }
     }
 }
 
-void imprimirLista(struct ListaZNN *lista){
-    printf("VIZINHOS\n");
-    for (int i=0; i<lista->tamanho; i++){
-        imprimirNodo(lista->vizinhos[i]);
-    }
-    printf("\n");
+// ========== INTERFACE PÚBLICA ==========
 
-    printf("DISTANCIAS\n");
-    for (int i=0; i<lista->tamanho; i++)
-        printf("%f, ", lista->distancias[i]);
-
-    printf("\n");
-    printf("tamanho: %d\n", lista->tamanho);
-    printf("capacidade: %d\n", lista->capMax);
-}
-/**
- * Encontra os k vizinhos mais próximos de um ponto
- * Retorna os vizinhos em um array ordenado por distância
- */
-void  z_vizinhos(struct nodo *raiz, float *ponto, int k, int numVizinhos,
-                       struct nodo **resultado, float *distancias, int *numEncontrados) {
-
-    // Cria lista temporária para a busca
-    struct ListaZNN *lista = criaListaZNN(k, numVizinhos);
-
-    // Executa a busca KNN
-    buscaZNN(raiz, ponto, lista, k, 0);
+void z_vizinhos(struct kd_nodo *raiz, const float *ponto, uint8_t k, 
+                size_t numVizinhos, struct kd_nodo **resultado, 
+                float *distancias, size_t *numEncontrados) {
+    
+    struct kd_lista *lista = criar_kdlista(k, numVizinhos);
+    buscar_kdlista(raiz, ponto, lista, k, 0);
     
     *numEncontrados = lista->tamanho;
-    // Copia resultados para os arrays de saída
-    for (int i = 0; i < lista->tamanho; i++) {
+    
+    for (size_t i = 0; i < lista->tamanho; i++) {
         resultado[i] = lista->vizinhos[i];
         distancias[i] = lista->distancias[i];
     }
     
-    // Libera memória temporária
-    liberaListaZNN(lista);
+    liberar_kdlista(lista);
 }

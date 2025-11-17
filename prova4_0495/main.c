@@ -1,160 +1,213 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include "KD_Tree.h"
 
-
-int main(){
-
+int main(void) {
     char linha[256];  
     char op;
-    size_t n, k;
+    size_t n;
+    uint8_t k;  
 
-    // verificar quantidade mínima possível de pontos
+    // Lê parâmetros iniciais
     printf("Insira N e K.\n");
-    if (scanf("%ld %ld", &n, &k) != 2){  
+    
+    unsigned long n_temp;
+    unsigned int k_temp;
+    if (scanf("%lu %u", &n_temp, &k_temp) != 2) {
         fprintf(stderr, "Número inválido\n");
-        return 1;
-    }
-
-    size_t *vetClasses = malloc(sizeof(size_t) * n);
-    if (!vetClasses) matarProgramaFaltaMemoria();
-
-    float **vetNodos = malloc(sizeof(float *) * n);  
-    if (!vetNodos) matarProgramaFaltaMemoria();
-
-    printf("Insira os pontos.\n");
-    for(size_t i=0; i < n; i++){
-
-        vetNodos[i] = malloc(sizeof(float) * k); 
-        if (!vetNodos[i]) matarProgramaFaltaMemoria();
-
-        for(size_t j=0; j < k; j++){
-            if (scanf("%f", &vetNodos[i][j]) != 1) falhaScanf();
-        }
-
-        if (scanf("%ld", &vetClasses[i]) != 1) falhaScanf();
+        return EXIT_FAILURE;
     }
     
+    // Validação de limites
+    if (k_temp > 255) {
+        fprintf(stderr, "Erro: K deve ser ≤ 255\n");
+        return EXIT_FAILURE;
+    }
+    if (n_temp == 0) {
+        fprintf(stderr, "Erro: N deve ser > 0\n");
+        return EXIT_FAILURE;
+    }
+    
+    n = (size_t)n_temp;
+    k = (uint8_t)k_temp;
 
-    struct nodo *raiz = construir(vetNodos, vetClasses, 0, k, 0, n-1);
+    uint32_t *vetClasses = malloc(n * sizeof(uint32_t));
+    if (!vetClasses) matar_programa_falta_memoria();
+
+    float **vetNodos = malloc(n * sizeof(float*));
+    if (!vetNodos) {
+        free(vetClasses); 
+        matar_programa_falta_memoria();
+    }
+
+    printf("Insira os pontos.\n");
+    for (size_t i = 0; i < n; i++) {
+        vetNodos[i] = malloc(k * sizeof(float));
+        if (!vetNodos[i]) {
+            for (size_t j = 0; j < i; j++) {
+                free(vetNodos[j]);
+            }
+            free(vetNodos);
+            free(vetClasses);
+            matar_programa_falta_memoria();
+        }
+
+        // Lê coordenadas
+        for (uint8_t j = 0; j < k; j++) {  
+            if (scanf("%f", &vetNodos[i][j]) != 1) {
+                falha_scanf();
+            }
+        }
+
+        if (scanf("%u", &vetClasses[i]) != 1) {
+            falha_scanf();
+        }
+    }
+
+    // Constrói a árvore
+    struct kd_nodo *raiz = construir_kdtree(vetNodos, vetClasses, 0, k, 0, n - 1);
     printf("Árvore construída.\n");
 
-    float *lerPonto = malloc(sizeof(float) * k);
-    if (!lerPonto) matarProgramaFaltaMemoria();
+    // Buffer para leitura de pontos
+    float *lerPonto = malloc(k * sizeof(float));
+    if (!lerPonto) matar_programa_falta_memoria();
 
-    // Limpar buffer antes de ler linhas
+    // Limpa buffer de entrada
     int c;
     while ((c = getchar()) != '\n' && c != EOF);
 
-    while(fgets(linha, sizeof(linha), stdin)) {
-        // Remover o \n
+    // Loop principal de comandos
+    while (fgets(linha, sizeof(linha), stdin)) {
+        // Remove newline
         linha[strcspn(linha, "\n")] = '\0';
 
-        // Ler operação (com espaço antes para pular whitespace)
-        if(sscanf(linha, " %c", &op) != 1) {
+        // Lê operação
+        if (sscanf(linha, " %c", &op) != 1) {
             fprintf(stderr, "Formato inválido\n");
             continue;
         }
 
-        // finalizar e sair
-        if(op == 'f') break;
+        // Finalizar
+        if (op == 'f') break;
 
         switch (op) {
-            case 'b': {
-                // b 7.2 3.0 5.8 1.6
-                char *ptr = linha + 1; // pula o 'b'
-                int lidos = 0;
+            case 'b': {  
+                // Buscar ponto exato
+                char *ptr = linha + 1;  // Pula 'b'
 
-                for (size_t i = 0; i < k; i++) {
+                // Lê coordenadas
+                int valido = 1;
+                for (uint8_t i = 0; i < k; i++) { 
                     int chars_consumidos;
                     if (sscanf(ptr, "%f%n", &lerPonto[i], &chars_consumidos) != 1) {
-                        fprintf(stderr, "Formato inválido\n");
-                        lidos = -1;
-                        break;
-                    }
-                    ptr += chars_consumidos; // avança o ponteiro
-                }
-
-                if (lidos == -1) break;
-
-                struct nodo *b = buscar(raiz, lerPonto, 0, k);
-                if(!b)
-                    printf("Não encontrado.\n");
-                else
-                    printf("Encontrado. Classe %ld.\n", b->classe);
-                break;
-            }
-
-            case 'l':
-                imprimirEmLargura(raiz);
-                break;
-
-            case 'z': {
-                // z 3 5.0 2.3 3.3 1.0
-                memset(lerPonto, 0, sizeof(float) * k);
-
-                size_t numVizinhos;
-                char *ptr = linha + 1; // pula o 'z'
-                int chars_consumidos;
-
-                if (sscanf(ptr, "%ld%n", &numVizinhos, &chars_consumidos) != 1) {
-                    fprintf(stderr, "Formato inválido\n");
-                    break;
-                }
-               
-
-                ptr += chars_consumidos;
-
-                struct nodo **vetVizinhos = malloc(sizeof(struct nodo *) * numVizinhos);
-                if (!vetVizinhos) matarProgramaFaltaMemoria();
-
-                float *vetDistancias = malloc(sizeof(float) * numVizinhos);
-                if (!vetDistancias) matarProgramaFaltaMemoria();
-
-                for (size_t i = 0; i < numVizinhos; i++) {
-                    vetVizinhos[i] = NULL;
-                    vetDistancias[i] = -1.0f;
-                }
-
-                int lidos = 0;
-                for (size_t i = 0; i < k; i++) {
-                    if (sscanf(ptr, "%f%n", &lerPonto[i], &chars_consumidos) != 1) {
-                        fprintf(stderr, "Formato inválido\n");
-                        lidos = -1;
+                        fprintf(stderr, "Formato inválido na coordenada %u\n", i);
+                        valido = 0;
                         break;
                     }
                     ptr += chars_consumidos;
                 }
 
-                if (lidos == -1) {
+                if (!valido) break;
+
+                struct kd_nodo *resultado = buscar_kdnodo(raiz, lerPonto, 0, k);
+                if (!resultado) {
+                    printf("Não encontrado.\n");
+                } else {
+                    printf("Encontrado. Classe %u.\n", resultado->classe); 
+                }
+                break;
+            }
+
+            case 'l':  
+                // Listar árvore
+                imprimir_em_largura(raiz);
+                break;
+
+            case 'z': {  
+                // Z-vizinhos (KNN)
+                char *ptr = linha + 1;  // Pula 'z'
+                int chars_consumidos;
+
+                // Lê número de vizinhos
+                unsigned long numVizinhos_temp;
+                if (sscanf(ptr, "%lu%n", &numVizinhos_temp, &chars_consumidos) != 1) {
+                    fprintf(stderr, "Formato inválido: número de vizinhos\n");
+                    break;
+                }
+                
+                size_t numVizinhos = (size_t)numVizinhos_temp;  
+                
+                if (numVizinhos == 0) {
+                    fprintf(stderr, "Erro: número de vizinhos deve ser > 0\n");
+                    break;
+                }
+                if (numVizinhos > n) {
+                    fprintf(stderr, "Aviso: pediu %zu vizinhos mas há apenas %zu pontos\n", 
+                            numVizinhos, n);
+                    numVizinhos = n;
+                }
+
+                ptr += chars_consumidos;
+
+                // Aloca arrays de resultado
+                struct kd_nodo **vetVizinhos = malloc(numVizinhos * sizeof(struct kd_nodo*));
+                if (!vetVizinhos) matar_programa_falta_memoria();
+
+                float *vetDistancias = malloc(numVizinhos * sizeof(float));
+                if (!vetDistancias) {
+                    free(vetVizinhos);
+                    matar_programa_falta_memoria();
+                }
+
+                // Lê coordenadas do ponto de consulta
+                int valido = 1;
+                for (uint8_t i = 0; i < k; i++) {  
+                    if (sscanf(ptr, "%f%n", &lerPonto[i], &chars_consumidos) != 1) {
+                        fprintf(stderr, "Formato inválido na coordenada %u\n", i);
+                        valido = 0;
+                        break;
+                    }
+                    ptr += chars_consumidos;
+                }
+
+                if (!valido) {
                     free(vetVizinhos);
                     free(vetDistancias);
                     break;
                 }
 
-                int nodosEncontrados = 0;
-                z_vizinhos(raiz, lerPonto, k, numVizinhos, vetVizinhos, vetDistancias, &nodosEncontrados);
-                imprimeZVizinhos(vetVizinhos, vetDistancias, nodosEncontrados, k);
+                // Executa busca KNN
+                size_t nodosEncontrados;  
+                z_vizinhos(raiz, lerPonto, k, numVizinhos, 
+                          vetVizinhos, vetDistancias, &nodosEncontrados);
+                
+                imprimir_z_vizinhos(vetVizinhos, vetDistancias, nodosEncontrados, k);
 
+                // Libera memória
                 free(vetVizinhos);
                 free(vetDistancias);
                 break;
             }
 
             default:
-                fprintf(stderr, "Opcao Invalida '%c'\n", op);
+                fprintf(stderr, "Opção inválida '%c'\n", op);
+                fprintf(stderr, "Comandos válidos: b (buscar), l (listar), z (k-nn), f (finalizar)\n");
         }
     }
+
+    // ===== CLEANUP FINAL =====
 
     free(lerPonto);
     free(vetClasses);
     
-    for (size_t i=0; i < n; i++)
+    for (size_t i = 0; i < n; i++) {
         free(vetNodos[i]);
+    }
     free(vetNodos);
     
-    destruirPosOrdem(raiz);
+    destruir_pos_ordem(raiz);
     
     return 0;
 }
